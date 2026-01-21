@@ -6,4 +6,4 @@ import * as schema from "./schema";
 export type DbClient = BetterSQLite3Database<typeof schema>;
 
 export const listNotes = (db: DbClient) =>
-  db.select().from(schema.notes).orderBy(asc(schema.notes.title));
+  db.select().from(schema.notes).orderBy(asc(schema.notes.title)).all();
