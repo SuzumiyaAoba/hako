@@ -1,0 +1,19 @@
+{
+  "name": "@hako/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint": "echo \"no lint configured\""
+  },
+  "dependencies": {
+    "hono": "4.5.8"
+  },
+  "devDependencies": {
+    "typescript": "5.5.4",
+    "@types/node": "20.14.15"
+  }
+}
