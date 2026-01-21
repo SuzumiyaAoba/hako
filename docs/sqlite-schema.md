@@ -20,15 +20,15 @@ Markdown ノートの依存グラフ（wiki link）とメタ情報を永続化�
 
 ### links
 
-| Column       | Type    | Notes                           |
-| ------------ | ------- | ------------------------------- | ----------------- |
-| id           | integer | 主キー（auto increment）        |
-| from_note_id | text    | 参照元ノート                    |
-| to_note_id   | text    | 参照先ノート（未解決なら null） |
-| to_title     | text    | `[[Title]]` の生文字列          |
-| to_path      | text    | 解決後のパス（任意）            |
-| link_text    | text    | 表示名（`[[Title                | Label]]` を想定） |
-| position     | integer | ソース内位置（任意）            |
+| Column       | Type    | Notes                               |
+| ------------ | ------- | ----------------------------------- |
+| id           | integer | 主キー（auto increment）            |
+| from_note_id | text    | 参照元ノート                        |
+| to_note_id   | text    | 参照先ノート（未解決なら null）     |
+| to_title     | text    | `[[Title]]` の生文字列              |
+| to_path      | text    | 解決後のパス（任意）                |
+| link_text    | text    | 表示名（`[[Title\|Label]]` を想定） |
+| position     | integer | ソース内位置（任意）                |
 
 ### tags / note_tags
 
@@ -153,7 +153,3 @@ erDiagram
 
 - 失敗時は `index_runs.status = failed` に更新
 - UI 側は最新の `success` のみを参照
-
-```
-
-```
