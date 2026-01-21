@@ -10,11 +10,11 @@ const port = Number(process.env["PORT"] ?? 8787);
 serve(
   {
     fetch: app.fetch,
-    port
+    port,
   },
   (info) => {
     console.log(`Hako API listening on http://localhost:${info.port}`);
-  }
+  },
 );
 
 export default app;
