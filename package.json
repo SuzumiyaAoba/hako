@@ -1,13 +1,28 @@
 {
   "name": "hako",
   "private": true,
-  "packageManager": "pnpm@9.12.1",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
+    "prepare": "husky install",
     "dev": "pnpm -r dev",
     "build": "pnpm -r build",
-    "lint": "pnpm -r lint"
-  }
+    "lint": "oxlint .",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check ."
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "oxfmt": "^0.26.0",
+    "oxlint": "^1.41.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,md,json,yaml,yml}": [
+      "oxfmt",
+      "oxlint"
+    ]
+  },
+  "packageManager": "pnpm@9.12.1"
 }
