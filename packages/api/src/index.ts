@@ -98,7 +98,7 @@ const app = new Hono();
 app.route("/", routes);
 app.get(
   "/openapi.json",
-  openAPIRouteHandler(app, {
+  openAPIRouteHandler(routes, {
     documentation: {
       info: {
         title: "Hako API",
