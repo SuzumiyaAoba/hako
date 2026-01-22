@@ -20,8 +20,7 @@
     "drizzle-orm": "^0.45.1",
     "hono": "4.11.5",
     "hono-openapi": "^1.1.2",
-    "zod": "^3.25.76",
-    "zod-openapi": "^4.2.4"
+    "valibot": "^1.2.0"
   },
   "devDependencies": {
     "@total-typescript/ts-reset": "^0.6.1",

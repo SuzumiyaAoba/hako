@@ -1,33 +1,28 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { describeRoute, openAPIRouteHandler, resolver, validator } from "hono-openapi";
-import { extendZodWithOpenApi } from "zod-openapi";
-import { z } from "zod";
+import * as v from "valibot";
 
 import { db } from "./db";
 import { getNoteById, listNotes } from "./db/queries";
 
 const routes = new Hono();
 
-extendZodWithOpenApi(z);
-
-const noteIdParamSchema = z.object({
-  id: z.string().min(1),
+const noteIdParamSchema = v.object({
+  id: v.pipe(v.string(), v.minLength(1)),
 });
 
-const noteSchema = z
-  .object({
-    id: z.string(),
-    title: z.string(),
-    path: z.string(),
-    content: z.string(),
-    contentHash: z.string(),
-    updatedAt: z.string(),
-  })
-  .openapi({ ref: "Note" });
+const noteSchema = v.object({
+  id: v.string(),
+  title: v.string(),
+  path: v.string(),
+  content: v.string(),
+  contentHash: v.string(),
+  updatedAt: v.string(),
+});
 
-const errorSchema = z.object({
-  message: z.string(),
+const errorSchema = v.object({
+  message: v.string(),
 });
 
 routes.get("/", (c) => c.text("Hako API"));
@@ -39,7 +34,7 @@ routes.get(
         description: "List notes",
         content: {
           "application/json": {
-            schema: resolver(z.array(noteSchema)),
+            schema: resolver(v.array(noteSchema)),
           },
         },
       },
