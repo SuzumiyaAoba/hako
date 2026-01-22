@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
-import { listNotes } from "../src/db/queries";
+import { getNoteById, listNotes } from "../src/db/queries";
 import * as schema from "../src/db/schema";
 
 const createDb = () => {
@@ -47,5 +47,33 @@ describe("listNotes", () => {
     const result = listNotes(db);
 
     expect(result.map((note) => note.title)).toEqual(["Alpha", "Zeta"]);
+  });
+});
+
+describe("getNoteById", () => {
+  it("returns a note when the id matches", () => {
+    const db = createDb();
+    db.insert(schema.notes)
+      .values({
+        id: "note-1",
+        title: "Alpha",
+        path: "alpha.md",
+        content: "# Alpha",
+        contentHash: "hash-1",
+        updatedAt: "2024-01-01T00:00:00Z",
+      })
+      .run();
+
+    const result = getNoteById(db, "note-1");
+
+    expect(result?.title).toBe("Alpha");
+  });
+
+  it("returns undefined when the id is missing", () => {
+    const db = createDb();
+
+    const result = getNoteById(db, "missing");
+
+    expect(result).toBeUndefined();
   });
 });
