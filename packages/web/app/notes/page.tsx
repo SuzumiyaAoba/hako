@@ -1,8 +1,8 @@
 import Link from "next/link";
 
-import { getNotes } from "../../lib/api";
+import { getNotes } from "@/entities/note/api/notes";
 
-export default async function NotesPage() {
+export default async function NotesPage(): Promise<JSX.Element> {
   const notes = await getNotes();
 
   return (

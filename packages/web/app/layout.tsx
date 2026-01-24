@@ -9,7 +9,7 @@ type RootLayoutProps = {
   children: ReactNode;
 };
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
   return (
     <html lang="ja">
       <body>{children}</body>

@@ -12,9 +12,11 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@hako/core": "workspace:*",
     "next": "14.2.5",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "valibot": "^1.2.0"
   },
   "devDependencies": {
     "@total-typescript/ts-reset": "^0.6.1",

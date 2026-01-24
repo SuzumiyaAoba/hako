@@ -1,28 +1,21 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { describeRoute, openAPIRouteHandler, resolver, validator } from "hono-openapi";
-import * as v from "valibot";
+import { object, pipe, string, minLength } from "valibot";
+
+import { NoteIdSchema, NoteSchema, NotesSchema } from "@hako/core";
 
 import { db } from "./db";
 import { getNoteById, listNotes } from "./db/queries";
 
 const routes = new Hono();
 
-const noteIdParamSchema = v.object({
-  id: v.pipe(v.string(), v.minLength(1)),
+const noteIdParamSchema = object({
+  id: NoteIdSchema,
 });
 
-const noteSchema = v.object({
-  id: v.string(),
-  title: v.string(),
-  path: v.string(),
-  content: v.string(),
-  contentHash: v.string(),
-  updatedAt: v.string(),
-});
-
-const errorSchema = v.object({
-  message: v.string(),
+const errorSchema = object({
+  message: pipe(string(), minLength(1)),
 });
 
 routes.get("/", (c) => c.text("Hako API"));
@@ -34,7 +27,7 @@ routes.get(
         description: "List notes",
         content: {
           "application/json": {
-            schema: resolver(v.array(noteSchema)),
+            schema: resolver(NotesSchema),
           },
         },
       },
@@ -50,7 +43,7 @@ routes.get(
         description: "Get note by id",
         content: {
           "application/json": {
-            schema: resolver(noteSchema),
+            schema: resolver(NoteSchema),
           },
         },
       },
