@@ -1,13 +1,18 @@
 import Link from "next/link";
+import { parse } from "valibot";
 
 import { getNote } from "@/entities/note/api/notes";
+import { NoteIdSchema } from "@/entities/note/model/types";
 
 type NotesDetailPageProps = {
   params: { id: string };
 };
 
-export default async function NotesDetailPage({ params }: NotesDetailPageProps) {
-  const note = await getNote(params.id);
+export default async function NotesDetailPage({
+  params,
+}: NotesDetailPageProps): Promise<JSX.Element> {
+  const noteId = parse(NoteIdSchema, params.id);
+  const note = await getNote(noteId);
 
   if (!note) {
     return (

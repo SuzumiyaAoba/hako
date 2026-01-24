@@ -1,11 +1,7 @@
-import { z } from "zod";
+import { parse } from "valibot";
 
 import { apiBaseUrl, fetchJson } from "../../../shared/api/client";
-import { NoteSchema, type Note, NoteIdSchema, type NoteId } from "../model/types";
-
-type NoteInput = z.input<typeof NoteSchema>;
-
-const NotesSchema: z.ZodType<Note[], z.ZodTypeDef, NoteInput[]> = NoteSchema.array();
+import { NoteSchema, NotesSchema, type Note, NoteIdSchema, type NoteId } from "../model/types";
 
 /**
  * Fetch all notes.
@@ -16,7 +12,7 @@ export const getNotes = async (): Promise<Note[]> => fetchJson("/notes", NotesSc
  * Fetch a note by id. Returns null when not found.
  */
 export const getNote = async (id: NoteId): Promise<Note | null> => {
-  NoteIdSchema.parse(id);
+  parse(NoteIdSchema, id);
   const response = await fetch(`${apiBaseUrl}/notes/${encodeURIComponent(id)}`, {
     cache: "no-store",
   });
@@ -28,5 +24,5 @@ export const getNote = async (id: NoteId): Promise<Note | null> => {
     throw new Error(`API request failed: ${response.status} ${response.statusText} ${body}`);
   }
   const data: unknown = await response.json();
-  return NoteSchema.parse(data);
+  return parse(NoteSchema, data);
 };
