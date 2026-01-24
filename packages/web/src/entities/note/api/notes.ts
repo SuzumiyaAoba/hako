@@ -1,9 +1,22 @@
-import type { Note } from "../model/types";
+import { z } from "zod";
+
 import { apiBaseUrl, fetchJson } from "../../../shared/api/client";
+import { NoteSchema, type Note, NoteIdSchema, type NoteId } from "../model/types";
 
-export const getNotes = async (): Promise<Note[]> => fetchJson<Note[]>("/notes");
+type NoteInput = z.input<typeof NoteSchema>;
 
-export const getNote = async (id: string): Promise<Note | null> => {
+const NotesSchema: z.ZodType<Note[], z.ZodTypeDef, NoteInput[]> = NoteSchema.array();
+
+/**
+ * Fetch all notes.
+ */
+export const getNotes = async (): Promise<Note[]> => fetchJson("/notes", NotesSchema);
+
+/**
+ * Fetch a note by id. Returns null when not found.
+ */
+export const getNote = async (id: NoteId): Promise<Note | null> => {
+  NoteIdSchema.parse(id);
   const response = await fetch(`${apiBaseUrl}/notes/${encodeURIComponent(id)}`, {
     cache: "no-store",
   });
@@ -14,5 +27,6 @@ export const getNote = async (id: string): Promise<Note | null> => {
     const body = await response.text().catch(() => "");
     throw new Error(`API request failed: ${response.status} ${response.statusText} ${body}`);
   }
-  return (await response.json()) as Note;
+  const data: unknown = await response.json();
+  return NoteSchema.parse(data);
 };
