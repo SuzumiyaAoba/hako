@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { getNote } from "../../../lib/api";
+import { getNote } from "@/entities/note/api/notes";
 
 type NotesDetailPageProps = {
   params: { id: string };
