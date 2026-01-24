@@ -72,10 +72,11 @@ routes.get(
       },
     },
   }),
-  validator("param", noteIdParamSchema, (result, c) => {
+  validator("param", noteIdParamSchema, (result, c): Response | void => {
     if (!result.success) {
       return c.json({ message: "Invalid note id" }, 400);
     }
+    return undefined;
   }),
   (c) => {
     const { id } = c.req.valid("param");
