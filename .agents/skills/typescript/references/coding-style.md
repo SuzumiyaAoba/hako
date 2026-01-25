@@ -8,4 +8,5 @@
   - Use branded types to prevent accidental mixing of identifiers and primitive values.
   - DO NOT rely on type assertions for parsing. Validate and parse external input with Zod/Valibot/ArkType.
 - Prefer `const`; use `let` only when necessary.
-- Write TSDoc comments for exported APIs.
+- Write TSDoc comments for types, top level variables and functions..
+- Add explicit type annotations to all exported functions.
