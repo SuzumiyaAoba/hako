@@ -62,7 +62,9 @@ export const GraphView = ({ nodes, links }: GraphViewProps): JSX.Element => {
 
     svg.attr("viewBox", `0 0 ${WIDTH} ${HEIGHT}`);
 
-    const link = svg
+    const viewport = svg.append("g");
+
+    const link = viewport
       .append("g")
       .attr("stroke", "#94a3b8")
       .attr("stroke-opacity", 0.7)
@@ -71,7 +73,7 @@ export const GraphView = ({ nodes, links }: GraphViewProps): JSX.Element => {
       .join("line")
       .attr("stroke-width", 1.5);
 
-    const node = svg
+    const node = viewport
       .append("g")
       .selectAll("g")
       .data(data.simNodes)
@@ -90,6 +92,19 @@ export const GraphView = ({ nodes, links }: GraphViewProps): JSX.Element => {
       .attr("y", 4)
       .style("font-size", "12px")
       .style("fill", "#0f172a");
+
+    const zoomBehavior = d3
+      .zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.2, 4])
+      .on("zoom", (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+        viewport.attr("transform", event.transform.toString());
+      });
+
+    svg.call(zoomBehavior);
+    svg.on("dblclick.zoom", null);
+    svg.on("dblclick", () => {
+      svg.transition().duration(200).call(zoomBehavior.transform, d3.zoomIdentity);
+    });
 
     const simulation = d3
       .forceSimulation(data.simNodes)
