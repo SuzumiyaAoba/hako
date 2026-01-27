@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -37,12 +37,17 @@ const mockFetch = () => {
     return new Response("not found", { status: 404 });
   });
 
-  globalThis.fetch = fetchMock;
+  vi.stubGlobal("fetch", fetchMock);
 };
 
 describe("pages smoke", () => {
   beforeEach(() => {
     mockFetch();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("renders home page", () => {
