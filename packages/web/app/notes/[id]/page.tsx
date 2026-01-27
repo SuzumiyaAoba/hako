@@ -20,6 +20,58 @@ type NotesDetailPageProps = {
 type NoteLinkTarget = Pick<Note, "id" | "title">;
 
 /**
+ * Extracts YAML frontmatter from the beginning of a markdown string.
+ */
+const extractFrontmatter = (content: string): { frontmatter: string | null; body: string } => {
+  const trimmed = content.trimStart();
+  if (!trimmed.startsWith("---")) {
+    return { frontmatter: null, body: content };
+  }
+
+  const endIndex = trimmed.indexOf("\n---", 3);
+  if (endIndex === -1) {
+    return { frontmatter: null, body: content };
+  }
+
+  const frontmatter = trimmed.slice(3, endIndex).trim();
+  let bodyStart = endIndex + 4;
+  if (trimmed[bodyStart] === "\n") {
+    bodyStart += 1;
+  }
+
+  return {
+    frontmatter: frontmatter || null,
+    body: trimmed.slice(bodyStart),
+  };
+};
+
+/**
+ * Parses frontmatter into key/value entries (simple YAML).
+ */
+const parseFrontmatterEntries = (
+  frontmatter: string | null,
+): Array<{ key: string; value: string }> => {
+  if (!frontmatter) {
+    return [];
+  }
+
+  return frontmatter
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"))
+    .map((line) => {
+      const index = line.indexOf(":");
+      if (index === -1) {
+        return { key: line, value: "" };
+      }
+      const key = line.slice(0, index).trim();
+      const value = line.slice(index + 1).trim();
+      return { key, value };
+    })
+    .filter((entry) => entry.key.length > 0);
+};
+
+/**
  * Builds a map from note title to its target metadata.
  */
 const buildTitleMap = (notes: ReadonlyArray<NoteLinkTarget>): Map<string, NoteLinkTarget> => {
@@ -53,7 +105,9 @@ export default async function NotesDetailPage({
   const notes = await getNotes();
   const titleMap = buildTitleMap(notes);
   const backlinks = buildBacklinks(notes, note.title);
-  const content = note.content.trim();
+  const { frontmatter, body } = extractFrontmatter(note.content ?? "");
+  const frontmatterEntries = parseFrontmatterEntries(frontmatter);
+  const content = body.trim();
   const html = content
     ? await renderMarkdown(content, (title, label) => {
         const target = titleMap.get(title);
@@ -69,8 +123,11 @@ export default async function NotesDetailPage({
     .note-content {
       line-height: 1.8;
       color: #111827;
-      max-width: 720px;
       margin-top: 1.5rem;
+    }
+    .note-shell {
+      max-width: 720px;
+      margin: 1.5rem auto 0;
     }
     .note-content > :first-child { margin-top: 0; }
     .note-content h1, .note-content h2, .note-content h3 {
@@ -111,6 +168,44 @@ export default async function NotesDetailPage({
       padding: 0;
       color: inherit;
     }
+    .frontmatter {
+      margin-top: 1.25rem;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .frontmatter-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+    .frontmatter table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      color: #1e293b;
+    }
+    .frontmatter th,
+    .frontmatter td {
+      text-align: left;
+      padding: 0.35rem 0.5rem;
+      border-top: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+    .frontmatter th {
+      width: 30%;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .frontmatter td {
+      color: #334155;
+      white-space: pre-wrap;
+    }
     .note-content a { color: #2563eb; }
     .note-content hr {
       border: none;
@@ -125,34 +220,55 @@ export default async function NotesDetailPage({
       <p>
         <Link href="/notes">← 一覧へ戻る</Link>
       </p>
-      <h1>{note.title}</h1>
-      <p style={{ color: "#6b7280" }}>{note.path}</p>
-      {content ? (
-        <article className="note-content" dangerouslySetInnerHTML={{ __html: html }} />
-      ) : (
-        <p>ノートの内容がまだ読み込まれていません。</p>
-      )}
-      <section style={{ marginTop: "2rem" }}>
-        <h2>バックリンク</h2>
-        {backlinks.length === 0 ? (
-          <p>バックリンクはありません。</p>
+      <div className="note-shell">
+        <h1>{note.title}</h1>
+        <p style={{ color: "#6b7280" }}>{note.path}</p>
+        {frontmatter ? (
+          <section className="frontmatter">
+            <div className="frontmatter-title">Frontmatter</div>
+            {frontmatterEntries.length > 0 ? (
+              <table>
+                <tbody>
+                  {frontmatterEntries.map((entry) => (
+                    <tr key={`${entry.key}-${entry.value}`}>
+                      <th>{entry.key}</th>
+                      <td>{entry.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div>{frontmatter}</div>
+            )}
+          </section>
+        ) : null}
+        {content ? (
+          <article className="note-content" dangerouslySetInnerHTML={{ __html: html }} />
         ) : (
-          <ul>
-            {backlinks.map((link) => {
-              const target = titleMap.get(link.title);
-              return (
-                <li key={link.title}>
-                  {target ? (
-                    <Link href={`/notes/${target.id}`}>{link.label}</Link>
-                  ) : (
-                    <span>{link.label}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <p>ノートの内容がまだ読み込まれていません。</p>
         )}
-      </section>
+        <section style={{ marginTop: "2rem" }}>
+          <h2>バックリンク</h2>
+          {backlinks.length === 0 ? (
+            <p>バックリンクはありません。</p>
+          ) : (
+            <ul>
+              {backlinks.map((link) => {
+                const target = titleMap.get(link.title);
+                return (
+                  <li key={link.title}>
+                    {target ? (
+                      <Link href={`/notes/${target.id}`}>{link.label}</Link>
+                    ) : (
+                      <span>{link.label}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
     </main>
   );
 }
