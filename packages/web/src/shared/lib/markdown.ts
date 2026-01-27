@@ -7,7 +7,7 @@ import rehypeShiki from "@shikijs/rehype";
 import { getHighlighter, type Highlighter } from "shiki";
 import { visit, SKIP } from "unist-util-visit";
 
-import { extractWikiLinks, type WikiLink } from "./wiki-links";
+import { extractWikiLinks } from "./wiki-links";
 
 /**
  * Resolves a wiki link title and label to a final link target.
@@ -219,26 +219,4 @@ export const renderMarkdown = async (
     .process(content);
 
   return String(file);
-};
-
-/**
- * Build backlinks for a note title from other notes.
- */
-export const buildBacklinks = (
-  notes: Array<{ title: string; content: string }>,
-  targetTitle: string,
-): WikiLink[] => {
-  const backlinks: WikiLink[] = [];
-
-  for (const note of notes) {
-    const links = extractWikiLinks(note.content);
-    for (const link of links) {
-      if (link.title === targetTitle) {
-        backlinks.push({ title: note.title, label: note.title });
-        break;
-      }
-    }
-  }
-
-  return backlinks;
 };

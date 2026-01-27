@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { buildBacklinks, renderMarkdown } from "../src/shared/lib/markdown";
+import { renderMarkdown } from "../src/shared/lib/markdown";
+import { buildBacklinks } from "../src/shared/lib/backlinks";
 import { extractWikiLinks } from "../src/shared/lib/wiki-links";
 
 describe("wiki links", () => {
