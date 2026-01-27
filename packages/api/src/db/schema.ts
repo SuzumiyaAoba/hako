@@ -36,6 +36,20 @@ export const links = sqliteTable(
   }),
 );
 
+export const noteLinkStates = sqliteTable(
+  "note_link_states",
+  {
+    noteId: text("note_id")
+      .primaryKey()
+      .references(() => notes.id, { onDelete: "cascade" }),
+    contentHash: text("content_hash").notNull(),
+    indexedAt: text("indexed_at").notNull(),
+  },
+  (table) => ({
+    noteIndex: index("idx_note_link_states_note_id").on(table.noteId),
+  }),
+);
+
 export const tags = sqliteTable(
   "tags",
   {
