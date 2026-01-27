@@ -115,4 +115,14 @@ describe("renderMarkdown", () => {
     expect(html).toContain("title");
     expect(html).toContain("Sample");
   });
+
+  it("renders frontmatter even with leading whitespace", async () => {
+    const html = await renderMarkdown(
+      ["", "", "---", "title: Sample", "---", "", "# Heading"].join("\n"),
+      (_title, label) => ({ href: null, label }),
+    );
+
+    expect(html).toContain("frontmatter");
+    expect(html).toContain("Sample");
+  });
 });

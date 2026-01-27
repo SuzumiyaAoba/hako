@@ -59,6 +59,18 @@ type FrontmatterEntry = {
   value: string;
 };
 
+/**
+ * Normalizes input so frontmatter at the top is recognized.
+ */
+const normalizeFrontmatterInput = (content: string): string => {
+  const withoutBom = content.replace(/^\uFEFF/, "");
+  const trimmedStart = withoutBom.trimStart();
+  if (trimmedStart.startsWith("---")) {
+    return trimmedStart;
+  }
+  return withoutBom;
+};
+
 type HastElement = {
   type: "element";
   tagName: string;
@@ -327,6 +339,7 @@ export const renderMarkdown = async (
   content: string,
   resolveWikiLink: ResolveWikiLink,
 ): Promise<string> => {
+  const normalizedContent = normalizeFrontmatterInput(content);
   const file = await unified()
     .use(remarkParse)
     .use(remarkFrontmatter, ["yaml"])
@@ -365,7 +378,7 @@ export const renderMarkdown = async (
     })
     .use(rehypeSanitize, SANITIZED_SCHEMA)
     .use(rehypeStringify)
-    .process(content);
+    .process(normalizedContent);
 
   return String(file);
 };
