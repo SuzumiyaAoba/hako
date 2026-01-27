@@ -3,6 +3,8 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
 import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
+import rehypeShiki from "@shikijs/rehype";
+import { getHighlighter, type Highlighter } from "shiki";
 import { visit, SKIP } from "unist-util-visit";
 
 import { extractWikiLinks, type WikiLink } from "./wiki-links";
@@ -170,6 +172,9 @@ const SANITIZED_SCHEMA: SanitizeSchema = {
   attributes: {
     ...defaultSchema.attributes,
     "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
+    pre: [...(defaultSchema.attributes?.["pre"] ?? []), "style"],
+    code: [...(defaultSchema.attributes?.["code"] ?? []), "style"],
+    span: [...(defaultSchema.attributes?.["span"] ?? []), "style"],
     ["a"]: [
       ...(defaultSchema.attributes?.["a"] ?? []),
       ["className", /^wiki-link(\s+unresolved)?$/],
@@ -178,16 +183,37 @@ const SANITIZED_SCHEMA: SanitizeSchema = {
 };
 
 /**
+ * Shared Shiki highlighter for markdown rendering.
+ */
+const highlighterPromise: Promise<Highlighter> = getHighlighter({
+  themes: ["github-light"],
+  langs: [
+    "bash",
+    "css",
+    "html",
+    "javascript",
+    "json",
+    "markdown",
+    "sql",
+    "tsx",
+    "typescript",
+    "yaml",
+  ],
+});
+
+/**
  * Render markdown to HTML with wiki links.
  */
 export const renderMarkdown = async (
   content: string,
   resolveWikiLink: ResolveWikiLink,
 ): Promise<string> => {
+  const highlighter = await highlighterPromise;
   const file = await unified()
     .use(remarkParse)
     .use(remarkWikiLink, { resolveWikiLink })
     .use(remarkRehype)
+    .use(rehypeShiki, { highlighter, theme: "github-light" })
     .use(rehypeSanitize, SANITIZED_SCHEMA)
     .use(rehypeStringify)
     .process(content);

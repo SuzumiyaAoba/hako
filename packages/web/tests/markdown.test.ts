@@ -91,4 +91,15 @@ describe("renderMarkdown", () => {
     expect(html).not.toContain("<script");
     expect(html).not.toContain("javascript:");
   });
+
+  it("renders code blocks with shiki highlighting", async () => {
+    const html = await renderMarkdown("```ts\nconst value = 1\n```", (_title, label) => ({
+      href: null,
+      label,
+    }));
+
+    expect(html).toContain("<pre");
+    expect(html).toContain("background-color");
+    expect(html).toContain("color:");
+  });
 });
