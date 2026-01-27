@@ -2,6 +2,7 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { visit, SKIP } from "unist-util-visit";
 
 import { extractWikiLinks, type WikiLink } from "./wiki-links";
@@ -28,7 +29,7 @@ type LinkNode = {
   children: TextNode[];
   data?: {
     hProperties?: {
-      className?: string[];
+      className?: string;
     };
   };
 };
@@ -39,7 +40,7 @@ type RootNode = {
 };
 
 const buildWikiLinkNode = (title: string, label: string, href: string | null): LinkNode => {
-  const className = href ? ["wiki-link"] : ["wiki-link", "unresolved"];
+  const className = href ? "wiki-link" : "wiki-link unresolved";
   return {
     type: "link",
     url: href ?? "#",
@@ -59,6 +60,8 @@ const splitTextWithWikiLinks = (
 ): Array<TextNode | LinkNode> => {
   const nodes: Array<TextNode | LinkNode> = [];
   let lastIndex = 0;
+
+  WIKI_LINK_PATTERN.lastIndex = 0;
 
   for (const match of value.matchAll(WIKI_LINK_PATTERN)) {
     const matchIndex = match.index ?? 0;
@@ -110,11 +113,10 @@ const remarkWikiLink = (options: { resolveWikiLink: ResolveWikiLink }) => {
         return;
       }
 
+      WIKI_LINK_PATTERN.lastIndex = 0;
       if (!WIKI_LINK_PATTERN.test(node.value)) {
         return;
       }
-
-      WIKI_LINK_PATTERN.lastIndex = 0;
 
       const replacement = splitTextWithWikiLinks(node.value, options.resolveWikiLink);
       if (replacement.length === 0) {
@@ -134,10 +136,19 @@ export const renderMarkdown = async (
   content: string,
   resolveWikiLink: ResolveWikiLink,
 ): Promise<string> => {
+  const sanitizedSchema = {
+    ...defaultSchema,
+    attributes: {
+      ...defaultSchema.attributes,
+      "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
+      a: [...(defaultSchema.attributes?.a ?? []), ["className", /^wiki-link(\s+unresolved)?$/]],
+    },
+  };
   const file = await unified()
     .use(remarkParse)
     .use(remarkWikiLink, { resolveWikiLink })
     .use(remarkRehype)
+    .use(rehypeSanitize, sanitizedSchema)
     .use(rehypeStringify)
     .process(content);
 
