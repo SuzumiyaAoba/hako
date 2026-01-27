@@ -1,10 +1,4 @@
-import {
-  index,
-  integer,
-  primaryKey,
-  sqliteTable,
-  text,
-} from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const notes = sqliteTable(
   "notes",
@@ -18,7 +12,7 @@ export const notes = sqliteTable(
   },
   (table) => ({
     titleIndex: index("idx_notes_title").on(table.title),
-  })
+  }),
 );
 
 export const links = sqliteTable(
@@ -39,7 +33,7 @@ export const links = sqliteTable(
   (table) => ({
     fromIndex: index("idx_links_from").on(table.fromNoteId),
     toIndex: index("idx_links_to").on(table.toNoteId),
-  })
+  }),
 );
 
 export const tags = sqliteTable(
@@ -50,7 +44,7 @@ export const tags = sqliteTable(
   },
   (table) => ({
     nameIndex: index("idx_tags_name").on(table.name),
-  })
+  }),
 );
 
 export const noteTags = sqliteTable(
@@ -65,7 +59,7 @@ export const noteTags = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.noteId, table.tagId] }),
-  })
+  }),
 );
 
 export const indexRuns = sqliteTable("index_runs", {
