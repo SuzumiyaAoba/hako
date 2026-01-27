@@ -13,6 +13,24 @@ describe("wiki links", () => {
     ]);
   });
 
+  it("ignores wiki links inside code blocks and inline code", () => {
+    const content = [
+      "Before [[Alpha]]",
+      "```",
+      'const code = "[[Beta]]";',
+      "```",
+      "Inline `[[Gamma]]` sample.",
+      "After [[Delta|D]]",
+    ].join("\n");
+
+    const links = extractWikiLinks(content);
+
+    expect(links).toEqual([
+      { title: "Alpha", label: "Alpha" },
+      { title: "Delta", label: "D" },
+    ]);
+  });
+
   it("builds backlinks", () => {
     const backlinks = buildBacklinks(
       [
