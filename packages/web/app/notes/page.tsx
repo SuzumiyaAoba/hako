@@ -19,8 +19,11 @@ export default async function NotesPage({ searchParams }: NotesPageProps): Promi
     <main style={{ padding: "2rem", fontFamily: "ui-sans-serif, system-ui" }}>
       <h1>ノート一覧</h1>
       <form style={{ marginBottom: "1rem" }}>
-        <label style={{ display: "block", marginBottom: "0.5rem" }}>検索</label>
+        <label htmlFor="notes-search" style={{ display: "block", marginBottom: "0.5rem" }}>
+          検索
+        </label>
         <input
+          id="notes-search"
           type="search"
           name="q"
           defaultValue={searchParams?.q ?? ""}
