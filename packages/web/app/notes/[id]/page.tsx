@@ -52,13 +52,16 @@ export default async function NotesDetailPage({
   const notes = await getNotes();
   const titleMap = buildTitleMap(notes);
   const backlinks = buildBacklinks(notes, note.title);
-  const html = await renderMarkdown(note.content, (title, label) => {
-    const target = titleMap.get(title);
-    return {
-      href: target ? `/notes/${target.id}` : null,
-      label,
-    };
-  });
+  const content = note.content.trim();
+  const html = content
+    ? await renderMarkdown(content, (title, label) => {
+        const target = titleMap.get(title);
+        return {
+          href: target ? `/notes/${target.id}` : null,
+          label,
+        };
+      })
+    : "";
 
   return (
     <main style={{ padding: "2rem", fontFamily: "ui-sans-serif, system-ui" }}>
@@ -71,7 +74,11 @@ export default async function NotesDetailPage({
       </p>
       <h1>{note.title}</h1>
       <p style={{ color: "#6b7280" }}>{note.path}</p>
-      <article dangerouslySetInnerHTML={{ __html: html }} />
+      {content ? (
+        <article dangerouslySetInnerHTML={{ __html: html }} />
+      ) : (
+        <p>ノートの内容がまだ読み込まれていません。</p>
+      )}
       <section style={{ marginTop: "2rem" }}>
         <h2>バックリンク</h2>
         {backlinks.length === 0 ? (
