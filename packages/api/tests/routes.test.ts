@@ -87,7 +87,7 @@ describe("notes routes", () => {
 
     const response = await app.request("http://localhost/notes/import", {
       method: "POST",
-      body: JSON.stringify({ paths: ["/tmp/Alpha.md"] }),
+      body: JSON.stringify({ notes: [{ path: "/tmp/Alpha.md", title: "From Frontmatter" }] }),
       headers: { "content-type": "application/json" },
     });
 
@@ -96,7 +96,7 @@ describe("notes routes", () => {
     expect(body.total).toBe(1);
     expect(body.created).toBe(1);
     expect(body.notes[0]).toMatchObject({
-      title: "Alpha",
+      title: "From Frontmatter",
       path: "/tmp/Alpha.md",
       status: "created",
     });

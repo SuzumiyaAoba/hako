@@ -5,7 +5,7 @@ import { basename, extname } from "node:path";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
-import { array, minLength, number, object, pipe, string } from "valibot";
+import { array, minLength, number, object, pipe, string, union } from "valibot";
 
 import { extractWikiLinks, NoteIdSchema, NoteSchema, NotesSchema, type Note } from "@hako/core";
 
@@ -147,9 +147,19 @@ export const createNotesRoutes = (db: DbClient) => {
     message: pipe(string(), minLength(1)),
   });
 
-  const importBodySchema = object({
-    paths: array(pipe(string(), minLength(1))),
+  const importNoteSchema = object({
+    path: pipe(string(), minLength(1)),
+    title: string(),
   });
+
+  const importBodySchema = union([
+    object({
+      paths: array(pipe(string(), minLength(1))),
+    }),
+    object({
+      notes: array(importNoteSchema),
+    }),
+  ]);
 
   routes.get(
     "/notes",
@@ -239,14 +249,17 @@ export const createNotesRoutes = (db: DbClient) => {
     async (c) => {
       const startedAt = new Date();
       const startedAtMs = startedAt.getTime();
-      const { paths } = c.req.valid("json");
+      const body = c.req.valid("json");
+      const notesInput =
+        "notes" in body ? body.notes : body.paths.map((path) => ({ path, title: "" }));
+      const paths = notesInput.map((note) => note.path);
 
       const results: ImportNoteResult[] = [];
       const imports = await Promise.all(
-        paths.map(async (path) => ({
-          path,
-          title: deriveTitleFromPath(path),
-          sourceHash: await computeSourceFingerprint(path),
+        notesInput.map(async (note) => ({
+          path: note.path,
+          title: note.title.trim() || deriveTitleFromPath(note.path),
+          sourceHash: await computeSourceFingerprint(note.path),
         })),
       );
 
