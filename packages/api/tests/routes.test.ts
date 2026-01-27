@@ -80,6 +80,33 @@ describe("notes routes", () => {
     expect(body).toEqual({ message: "Note not found" });
   });
 
+  it("imports note paths without storing content", async () => {
+    const db = createDb();
+    const app = new Hono();
+    app.route("/", createNotesRoutes(db));
+
+    const response = await app.request("http://localhost/notes/import", {
+      method: "POST",
+      body: JSON.stringify({ paths: ["/tmp/Alpha.md"] }),
+      headers: { "content-type": "application/json" },
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.total).toBe(1);
+    expect(body.created).toBe(1);
+    expect(body.notes[0]).toMatchObject({
+      title: "Alpha",
+      path: "/tmp/Alpha.md",
+      status: "created",
+    });
+
+    const notes = db.select().from(schema.notes).all();
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.content).toBe("");
+    expect(notes[0]?.path).toBe("/tmp/Alpha.md");
+  });
+
   it("reindexes note links and skips unchanged notes", async () => {
     const db = createDb();
     db.insert(schema.notes)

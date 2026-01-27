@@ -61,6 +61,7 @@ describe("openapi", () => {
 
     const paths = Object.keys(body.paths ?? {});
     expect(paths).toContain("/notes");
+    expect(paths).toContain("/notes/import");
     expect(paths).toContain("/notes/reindex");
     const hasDetail = paths.some((path) => path === "/notes/{id}" || path === "/notes/:id");
     expect(hasDetail).toBe(true);

@@ -1,7 +1,11 @@
+import { createHash } from "node:crypto";
+import { stat } from "node:fs/promises";
+import { basename, extname } from "node:path";
+
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
-import { minLength, number, object, pipe, string } from "valibot";
+import { array, minLength, number, object, pipe, string } from "valibot";
 
 import { extractWikiLinks, NoteIdSchema, NoteSchema, NotesSchema, type Note } from "@hako/core";
 
@@ -34,6 +38,68 @@ type LinkInsert = typeof schema.links.$inferInsert;
 
 type NoteLinkStateInsert = typeof schema.noteLinkStates.$inferInsert;
 
+/**
+ * Response schema for note import.
+ */
+const importResponseSchema = object({
+  startedAt: string(),
+  finishedAt: string(),
+  durationMs: number(),
+  total: number(),
+  created: number(),
+  updated: number(),
+  skipped: number(),
+  notes: array(
+    object({
+      id: string(),
+      title: string(),
+      path: string(),
+      status: string(),
+    }),
+  ),
+});
+
+type ImportStatus = "created" | "updated" | "skipped";
+
+type ImportNoteResult = {
+  id: string;
+  title: string;
+  path: string;
+  status: ImportStatus;
+};
+
+type ImportStats = {
+  created: number;
+  updated: number;
+  skipped: number;
+};
+
+/**
+ * Derives a note title from a file path.
+ */
+const deriveTitleFromPath = (path: string): string => {
+  const filename = basename(path);
+  const extension = extname(filename);
+  return extension.length > 0 ? filename.slice(0, -extension.length) : filename;
+};
+
+/**
+ * Computes a stable identifier for a note path.
+ */
+const computeNoteId = (path: string): string => createHash("sha256").update(path).digest("hex");
+
+/**
+ * Computes a lightweight fingerprint without reading file contents.
+ */
+const computeSourceFingerprint = async (path: string): Promise<string> => {
+  try {
+    const stats = await stat(path);
+    const fingerprint = `${path}:${stats.mtimeMs}:${stats.size}`;
+    return createHash("sha256").update(fingerprint).digest("hex");
+  } catch {
+    return createHash("sha256").update(path).digest("hex");
+  }
+};
 /**
  * Builds a lookup table keyed by note title.
  */
@@ -79,6 +145,10 @@ export const createNotesRoutes = (db: DbClient) => {
 
   const errorSchema = object({
     message: pipe(string(), minLength(1)),
+  });
+
+  const importBodySchema = object({
+    paths: array(pipe(string(), minLength(1))),
   });
 
   routes.get(
@@ -143,6 +213,114 @@ export const createNotesRoutes = (db: DbClient) => {
       }
 
       return c.json(note);
+    },
+  );
+
+  routes.post(
+    "/notes/import",
+    describeRoute({
+      responses: {
+        200: {
+          description: "Import note paths",
+          content: {
+            "application/json": {
+              schema: resolver(importResponseSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("json", importBodySchema, (result, c): Response | void => {
+      if (!result.success) {
+        return c.json({ message: "Invalid request body" }, 400);
+      }
+      return undefined;
+    }),
+    async (c) => {
+      const startedAt = new Date();
+      const startedAtMs = startedAt.getTime();
+      const { paths } = c.req.valid("json");
+
+      const results: ImportNoteResult[] = [];
+      const imports = await Promise.all(
+        paths.map(async (path) => ({
+          path,
+          title: deriveTitleFromPath(path),
+          sourceHash: await computeSourceFingerprint(path),
+        })),
+      );
+
+      const stats = db.transaction((tx): ImportStats => {
+        let created = 0;
+        let updated = 0;
+        let skipped = 0;
+
+        for (const entry of imports) {
+          const { path, title, sourceHash } = entry;
+          const existing = tx.select().from(schema.notes).where(eq(schema.notes.path, path)).get();
+
+          if (!existing) {
+            const id = computeNoteId(path);
+            tx.insert(schema.notes)
+              .values({
+                id,
+                title,
+                path,
+                content: "",
+                contentHash: sourceHash,
+                updatedAt: new Date().toISOString(),
+              })
+              .run();
+            results.push({ id, title, path, status: "created" });
+            created += 1;
+            continue;
+          }
+
+          const canUpdateContentHash = existing.content === "";
+          const shouldUpdate =
+            existing.title !== title ||
+            (canUpdateContentHash && existing.contentHash !== sourceHash);
+
+          if (!shouldUpdate) {
+            results.push({
+              id: existing.id,
+              title: existing.title,
+              path: existing.path,
+              status: "skipped",
+            });
+            skipped += 1;
+            continue;
+          }
+
+          tx.update(schema.notes)
+            .set({
+              title,
+              updatedAt: new Date().toISOString(),
+              ...(canUpdateContentHash ? { contentHash: sourceHash } : {}),
+            })
+            .where(eq(schema.notes.path, path))
+            .run();
+
+          results.push({ id: existing.id, title, path, status: "updated" });
+          updated += 1;
+        }
+
+        return { created, updated, skipped };
+      });
+
+      const finishedAt = new Date();
+      const durationMs = finishedAt.getTime() - startedAtMs;
+
+      return c.json({
+        startedAt: startedAt.toISOString(),
+        finishedAt: finishedAt.toISOString(),
+        durationMs,
+        total: paths.length,
+        created: stats.created,
+        updated: stats.updated,
+        skipped: stats.skipped,
+        notes: results,
+      });
     },
   );
 
