@@ -1,3 +1,5 @@
+import { writeFile, unlink } from "node:fs/promises";
+
 import { describe, expect, it } from "vitest";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -78,6 +80,59 @@ describe("notes routes", () => {
     expect(response.status).toBe(404);
     const body = await response.json();
     expect(body).toEqual({ message: "Note not found" });
+  });
+
+  it("returns note content from filesystem", async () => {
+    const db = createDb();
+    const filePath = "/tmp/hako-note-detail.md";
+    await writeFile(filePath, "# Hello\n");
+
+    db.insert(schema.notes)
+      .values({
+        id: "note-1",
+        title: "Hello",
+        path: filePath,
+        content: "",
+        contentHash: "hash-1",
+        updatedAt: "2024-01-01T00:00:00Z",
+      })
+      .run();
+
+    const app = new Hono();
+    app.route("/", createNotesRoutes(db));
+
+    try {
+      const response = await app.request("http://localhost/notes/note-1");
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.content).toBe("# Hello\n");
+    } finally {
+      await unlink(filePath).catch(() => undefined);
+    }
+  });
+
+  it("returns 404 when note file is missing", async () => {
+    const db = createDb();
+    db.insert(schema.notes)
+      .values({
+        id: "note-1",
+        title: "Missing",
+        path: "/tmp/hako-missing.md",
+        content: "",
+        contentHash: "hash-1",
+        updatedAt: "2024-01-01T00:00:00Z",
+      })
+      .run();
+
+    const app = new Hono();
+    app.route("/", createNotesRoutes(db));
+
+    const response = await app.request("http://localhost/notes/note-1");
+
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body).toEqual({ message: "Note file not found" });
   });
 
   it("imports note paths without storing content", async () => {

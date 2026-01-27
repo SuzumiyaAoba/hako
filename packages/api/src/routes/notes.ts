@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { basename, extname } from "node:path";
 
 import { eq } from "drizzle-orm";
@@ -214,7 +214,7 @@ export const createNotesRoutes = (db: DbClient) => {
       }
       return undefined;
     }),
-    (c) => {
+    async (c) => {
       const { id } = c.req.valid("param");
       const note = getNoteById(db, id);
 
@@ -222,7 +222,12 @@ export const createNotesRoutes = (db: DbClient) => {
         return c.json({ message: "Note not found" }, 404);
       }
 
-      return c.json(note);
+      try {
+        const content = await readFile(note.path, "utf-8");
+        return c.json({ ...note, content });
+      } catch {
+        return c.json({ message: "Note file not found" }, 404);
+      }
     },
   );
 
