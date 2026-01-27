@@ -2,26 +2,36 @@ import Link from "next/link";
 import { parse } from "valibot";
 
 import { getNote, getNotes } from "@/entities/note/api/notes";
+import type { Note } from "@hako/core";
 import { NoteIdSchema } from "@/entities/note/model/types";
 import { buildBacklinks, renderMarkdown } from "@/shared/lib/markdown";
 
+/**
+ * Props for the note detail page.
+ */
 type NotesDetailPageProps = {
   params: { id: string };
 };
 
-type LinkTarget = {
-  id: string;
-  title: string;
-};
+/**
+ * Minimal note data needed for link resolution.
+ */
+type NoteLinkTarget = Pick<Note, "id" | "title">;
 
-const buildTitleMap = (notes: LinkTarget[]): Map<string, LinkTarget> => {
-  const map = new Map<string, LinkTarget>();
+/**
+ * Builds a map from note title to its target metadata.
+ */
+const buildTitleMap = (notes: ReadonlyArray<NoteLinkTarget>): Map<string, NoteLinkTarget> => {
+  const map = new Map<string, NoteLinkTarget>();
   for (const note of notes) {
     map.set(note.title, note);
   }
   return map;
 };
 
+/**
+ * Note detail page with rendered markdown and backlinks.
+ */
 export default async function NotesDetailPage({
   params,
 }: NotesDetailPageProps): Promise<JSX.Element> {
