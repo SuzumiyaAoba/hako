@@ -1,6 +1,8 @@
 /**
  * Home page for the web app.
  */
+import type { JSX } from "react";
+
 export default function HomePage(): JSX.Element {
   return (
     <main style={{ padding: "2rem", fontFamily: "ui-sans-serif, system-ui" }}>

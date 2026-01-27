@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { JSX } from "react";
 
 import { getNotes } from "@/entities/note/api/notes";
 import { GraphView } from "@/features/graph/ui/GraphView";
