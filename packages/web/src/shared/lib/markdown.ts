@@ -3,9 +3,8 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
 import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
+import rehypeShiki from "@shikijs/rehype";
 import { visit, SKIP } from "unist-util-visit";
-
-import { extractWikiLinks, type WikiLink } from "./wiki-links";
 
 /**
  * Resolves a wiki link title and label to a final link target.
@@ -170,6 +169,9 @@ const SANITIZED_SCHEMA: SanitizeSchema = {
   attributes: {
     ...defaultSchema.attributes,
     "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
+    pre: [...(defaultSchema.attributes?.["pre"] ?? []), "style"],
+    code: [...(defaultSchema.attributes?.["code"] ?? []), "style"],
+    span: [...(defaultSchema.attributes?.["span"] ?? []), "style"],
     ["a"]: [
       ...(defaultSchema.attributes?.["a"] ?? []),
       ["className", /^wiki-link(\s+unresolved)?$/],
@@ -188,31 +190,24 @@ export const renderMarkdown = async (
     .use(remarkParse)
     .use(remarkWikiLink, { resolveWikiLink })
     .use(remarkRehype)
+    .use(rehypeShiki, {
+      theme: "github-light",
+      langs: [
+        "bash",
+        "css",
+        "html",
+        "javascript",
+        "json",
+        "markdown",
+        "sql",
+        "tsx",
+        "typescript",
+        "yaml",
+      ],
+    })
     .use(rehypeSanitize, SANITIZED_SCHEMA)
     .use(rehypeStringify)
     .process(content);
 
   return String(file);
-};
-
-/**
- * Build backlinks for a note title from other notes.
- */
-export const buildBacklinks = (
-  notes: Array<{ title: string; content: string }>,
-  targetTitle: string,
-): WikiLink[] => {
-  const backlinks: WikiLink[] = [];
-
-  for (const note of notes) {
-    const links = extractWikiLinks(note.content);
-    for (const link of links) {
-      if (link.title === targetTitle) {
-        backlinks.push({ title: note.title, label: note.title });
-        break;
-      }
-    }
-  }
-
-  return backlinks;
 };

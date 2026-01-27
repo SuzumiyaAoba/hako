@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { buildBacklinks, renderMarkdown } from "../src/shared/lib/markdown";
+import { renderMarkdown } from "../src/shared/lib/markdown";
+import { buildBacklinks } from "../src/shared/lib/backlinks";
 import { extractWikiLinks } from "../src/shared/lib/wiki-links";
 
 describe("wiki links", () => {
@@ -90,5 +91,16 @@ describe("renderMarkdown", () => {
 
     expect(html).not.toContain("<script");
     expect(html).not.toContain("javascript:");
+  });
+
+  it("renders code blocks with shiki highlighting", async () => {
+    const html = await renderMarkdown("```ts\nconst value = 1\n```", (_title, label) => ({
+      href: null,
+      label,
+    }));
+
+    expect(html).toContain("<pre");
+    expect(html).toContain("background-color");
+    expect(html).toContain("color:");
   });
 });
