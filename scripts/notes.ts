@@ -156,7 +156,9 @@ const reindexNotes = async (baseUrl: string): Promise<void> => {
  * Entry point.
  */
 const main = async (): Promise<void> => {
-  const [command, targetDir] = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const normalizedArgs = args[0] === "--" ? args.slice(1) : args;
+  const [command, targetDir] = normalizedArgs;
   const baseUrl = process.env["HAKO_API_BASE_URL"] ?? DEFAULT_API_BASE_URL;
 
   if (command === "reindex") {
