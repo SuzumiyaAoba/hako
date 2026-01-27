@@ -2,17 +2,42 @@ import Link from "next/link";
 
 import { getNotes } from "@/entities/note/api/notes";
 
-type NotesPageProps = {
-  searchParams?: {
-    q?: string;
-  };
+/**
+ * Query parameters accepted by the notes page.
+ */
+type NotesSearchParams = {
+  q?: string | string[];
 };
 
-const normalizeQuery = (value: string | undefined): string => value?.trim().toLowerCase() ?? "";
+/**
+ * Props for the notes page.
+ */
+type NotesPageProps = {
+  searchParams?: NotesSearchParams;
+};
 
+/**
+ * Normalizes a query parameter into a single lowercase string.
+ */
+/**
+ * Resolves a single query value from a potentially repeated parameter.
+ */
+const resolveQueryValue = (value: string | string[] | undefined): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
+/**
+ * Normalizes a query parameter into a single lowercase string.
+ */
+const normalizeQuery = (value: string | string[] | undefined): string =>
+  resolveQueryValue(value)?.trim().toLowerCase() ?? "";
+
+/**
+ * Notes list page with optional search filtering.
+ */
 export default async function NotesPage({ searchParams }: NotesPageProps): Promise<JSX.Element> {
   const notes = await getNotes();
-  const query = normalizeQuery(searchParams?.q);
+  const queryValue = resolveQueryValue(searchParams?.q);
+  const query = normalizeQuery(queryValue);
   const filtered = query ? notes.filter((note) => note.title.toLowerCase().includes(query)) : notes;
 
   return (
@@ -26,7 +51,7 @@ export default async function NotesPage({ searchParams }: NotesPageProps): Promi
           id="notes-search"
           type="search"
           name="q"
-          defaultValue={searchParams?.q ?? ""}
+          defaultValue={queryValue ?? ""}
           placeholder="タイトルで検索"
           style={{
             padding: "0.5rem",

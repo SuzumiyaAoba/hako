@@ -4,6 +4,9 @@ import { getNotes } from "@/entities/note/api/notes";
 import { GraphView } from "@/features/graph/ui/GraphView";
 import { buildNoteGraph } from "@/shared/lib/graph";
 
+/**
+ * Graph view page for notes.
+ */
 export default async function GraphPage(): Promise<JSX.Element> {
   const notes = await getNotes();
   const graph = buildNoteGraph(notes);

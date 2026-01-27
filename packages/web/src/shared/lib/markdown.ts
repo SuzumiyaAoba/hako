@@ -7,6 +7,9 @@ import { visit, SKIP } from "unist-util-visit";
 
 import { extractWikiLinks, type WikiLink } from "./wiki-links";
 
+/**
+ * Resolves a wiki link title and label to a final link target.
+ */
 export type ResolveWikiLink = (
   title: string,
   label: string,
@@ -15,13 +18,22 @@ export type ResolveWikiLink = (
   label: string;
 };
 
+/**
+ * Matches wiki link syntax like [[Title]] or [[Title|Label]].
+ */
 const WIKI_LINK_PATTERN = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
 
+/**
+ * Text node in a markdown AST.
+ */
 type TextNode = {
   type: "text";
   value: string;
 };
 
+/**
+ * Link node in a markdown AST.
+ */
 type LinkNode = {
   type: "link";
   url: string;
@@ -34,11 +46,17 @@ type LinkNode = {
   };
 };
 
+/**
+ * Root node for a markdown AST fragment.
+ */
 type RootNode = {
   type: "root";
   children: Array<TextNode | LinkNode>;
 };
 
+/**
+ * Builds a link node for a resolved wiki link.
+ */
 const buildWikiLinkNode = (title: string, label: string, href: string | null): LinkNode => {
   const className = href ? "wiki-link" : "wiki-link unresolved";
   return {
@@ -54,6 +72,9 @@ const buildWikiLinkNode = (title: string, label: string, href: string | null): L
   };
 };
 
+/**
+ * Splits text into plain text and wiki link nodes.
+ */
 const splitTextWithWikiLinks = (
   value: string,
   resolveWikiLink: ResolveWikiLink,
@@ -89,9 +110,15 @@ const splitTextWithWikiLinks = (
   return nodes;
 };
 
+/**
+ * Narrow unknown values to plain objects.
+ */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+/**
+ * Checks if a node is a text node.
+ */
 const isTextNode = (node: unknown): node is TextNode => {
   if (!isRecord(node)) {
     return false;
@@ -99,6 +126,9 @@ const isTextNode = (node: unknown): node is TextNode => {
   return node["type"] === "text" && typeof node["value"] === "string";
 };
 
+/**
+ * Checks if a node has children.
+ */
 const hasChildren = (node: unknown): node is RootNode => {
   if (!isRecord(node)) {
     return false;
@@ -106,6 +136,9 @@ const hasChildren = (node: unknown): node is RootNode => {
   return Array.isArray(node["children"]);
 };
 
+/**
+ * Remark plugin that replaces wiki link text with link nodes.
+ */
 const remarkWikiLink = (options: { resolveWikiLink: ResolveWikiLink }) => {
   return (tree: RootNode) => {
     visit(tree, "text", (node, index, parent) => {
@@ -130,28 +163,32 @@ const remarkWikiLink = (options: { resolveWikiLink: ResolveWikiLink }) => {
 };
 
 /**
+ * Sanitization schema for rendered markdown.
+ */
+const SANITIZED_SCHEMA: SanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
+    ["a"]: [
+      ...(defaultSchema.attributes?.["a"] ?? []),
+      ["className", /^wiki-link(\s+unresolved)?$/],
+    ],
+  },
+};
+
+/**
  * Render markdown to HTML with wiki links.
  */
 export const renderMarkdown = async (
   content: string,
   resolveWikiLink: ResolveWikiLink,
 ): Promise<string> => {
-  const sanitizedSchema: SanitizeSchema = {
-    ...defaultSchema,
-    attributes: {
-      ...defaultSchema.attributes,
-      "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
-      ["a"]: [
-        ...(defaultSchema.attributes?.["a"] ?? []),
-        ["className", /^wiki-link(\s+unresolved)?$/],
-      ],
-    },
-  };
   const file = await unified()
     .use(remarkParse)
     .use(remarkWikiLink, { resolveWikiLink })
     .use(remarkRehype)
-    .use(rehypeSanitize, sanitizedSchema)
+    .use(rehypeSanitize, SANITIZED_SCHEMA)
     .use(rehypeStringify)
     .process(content);
 

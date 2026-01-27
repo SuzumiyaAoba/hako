@@ -6,21 +6,39 @@ import * as d3 from "d3";
 
 import type { GraphLink, GraphNode } from "@/shared/lib/graph";
 
+/**
+ * Props for GraphView.
+ */
 type GraphViewProps = {
   nodes: GraphNode[];
   links: GraphLink[];
 };
 
+/**
+ * Simulation node type for D3.
+ */
 type SimNode = GraphNode & d3.SimulationNodeDatum;
 
+/**
+ * Simulation link type for D3.
+ */
 type SimLink = d3.SimulationLinkDatum<SimNode> & {
   source: string | SimNode;
   target: string | SimNode;
 };
 
+/**
+ * Default width for the SVG viewBox.
+ */
 const WIDTH = 900;
+/**
+ * Default height for the SVG viewBox.
+ */
 const HEIGHT = 520;
 
+/**
+ * Force-directed graph view for notes.
+ */
 export const GraphView = ({ nodes, links }: GraphViewProps): JSX.Element => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const router = useRouter();
@@ -82,19 +100,19 @@ export const GraphView = ({ nodes, links }: GraphViewProps): JSX.Element => {
       .force("charge", d3.forceManyBody().strength(-120))
       .force("center", d3.forceCenter(WIDTH / 2, HEIGHT / 2));
 
-    const resolveNode = (value: string | SimNode): SimNode | null =>
-      typeof value === "string" ? null : value;
-
-    const resolveX = (value: string | SimNode): number => resolveNode(value)?.x ?? 0;
-
-    const resolveY = (value: string | SimNode): number => resolveNode(value)?.y ?? 0;
+    const resolveCoordinate = (value: string | SimNode, axis: "x" | "y"): number => {
+      if (typeof value === "string") {
+        return 0;
+      }
+      return value[axis] ?? 0;
+    };
 
     simulation.on("tick", () => {
       link
-        .attr("x1", (d: SimLink) => resolveX(d.source))
-        .attr("y1", (d: SimLink) => resolveY(d.source))
-        .attr("x2", (d: SimLink) => resolveX(d.target))
-        .attr("y2", (d: SimLink) => resolveY(d.target));
+        .attr("x1", (d: SimLink) => resolveCoordinate(d.source, "x"))
+        .attr("y1", (d: SimLink) => resolveCoordinate(d.source, "y"))
+        .attr("x2", (d: SimLink) => resolveCoordinate(d.target, "x"))
+        .attr("y2", (d: SimLink) => resolveCoordinate(d.target, "y"));
 
       node.attr("transform", (d: SimNode) => `translate(${d.x ?? 0}, ${d.y ?? 0})`);
     });

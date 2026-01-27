@@ -2,16 +2,25 @@ import type { Note } from "@hako/core";
 
 import { extractWikiLinks } from "./wiki-links";
 
+/**
+ * Graph node representing a note.
+ */
 export type GraphNode = {
   id: string;
   title: string;
 };
 
+/**
+ * Graph link between notes.
+ */
 export type GraphLink = {
   source: string;
   target: string;
 };
 
+/**
+ * Graph data for notes.
+ */
 export type NoteGraph = {
   nodes: GraphNode[];
   links: GraphLink[];

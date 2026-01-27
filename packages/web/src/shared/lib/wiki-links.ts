@@ -1,11 +1,23 @@
+/**
+ * Represents a parsed wiki link.
+ */
 export type WikiLink = {
   title: string;
   label: string;
 };
 
+/**
+ * Matches wiki link syntax like [[Title]] or [[Title|Label]].
+ */
 const WIKI_LINK_PATTERN = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-const FENCED_CODE_BLOCK_PATTERN = /```[\s\S]*?```/g;
-const INLINE_CODE_PATTERN = /`[^`]*`/g;
+/**
+ * Matches fenced code blocks using backticks or tildes.
+ */
+const FENCED_CODE_BLOCK_PATTERN = /(```+|~~~+)[\s\S]*?\1/g;
+/**
+ * Matches inline code spans using one or more backticks.
+ */
+const INLINE_CODE_PATTERN = /(`+)([^\n]*?)\1/g;
 
 /**
  * Mask code spans to avoid matching wiki links inside code.

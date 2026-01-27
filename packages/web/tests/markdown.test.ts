@@ -16,10 +16,13 @@ describe("wiki links", () => {
   it("ignores wiki links inside code blocks and inline code", () => {
     const content = [
       "Before [[Alpha]]",
-      "```",
+      "```ts",
       'const code = "[[Beta]]";',
       "```",
-      "Inline `[[Gamma]]` sample.",
+      "Inline ``[[Gamma]]`` sample.",
+      "~~~",
+      "[[Epsilon]]",
+      "~~~",
       "After [[Delta|D]]",
     ].join("\n");
 

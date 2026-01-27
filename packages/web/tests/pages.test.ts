@@ -6,6 +6,9 @@ import HomePage from "../app/page";
 import NotesPage from "../app/notes/page";
 import NotesDetailPage from "../app/notes/[id]/page";
 
+/**
+ * Test fixture notes.
+ */
 const notes = [
   {
     id: "note-1",
@@ -19,12 +22,18 @@ const notes = [
 
 globalThis.React = React;
 
+/**
+ * Creates a JSON response for mock fetch.
+ */
 const createJsonResponse = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {
     status,
     headers: { "content-type": "application/json" },
   });
 
+/**
+ * Stubs global fetch for tests.
+ */
 const mockFetch = () => {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const url = input.toString();
@@ -58,6 +67,12 @@ describe("pages smoke", () => {
 
   it("renders notes page", async () => {
     const element = await NotesPage({ searchParams: { q: "Al" } });
+    const html = renderToStaticMarkup(element);
+    expect(html).toContain("Alpha");
+  });
+
+  it("renders notes page with repeated query params", async () => {
+    const element = await NotesPage({ searchParams: { q: ["Al", "Beta"] } });
     const html = renderToStaticMarkup(element);
     expect(html).toContain("Alpha");
   });
