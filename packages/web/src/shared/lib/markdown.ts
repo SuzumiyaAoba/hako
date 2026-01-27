@@ -1,5 +1,6 @@
 import { unified } from "unified";
 import remarkParse from "remark-parse";
+import remarkFrontmatter from "remark-frontmatter";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
 import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
@@ -51,6 +52,18 @@ type LinkNode = {
 type RootNode = {
   type: "root";
   children: Array<TextNode | LinkNode>;
+};
+
+type FrontmatterEntry = {
+  key: string;
+  value: string;
+};
+
+type HastElement = {
+  type: "element";
+  tagName: string;
+  properties?: Record<string, unknown>;
+  children?: unknown[];
 };
 
 /**
@@ -114,6 +127,134 @@ const splitTextWithWikiLinks = (
  */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+
+/**
+ * Parses frontmatter into key/value entries (simple YAML).
+ */
+const parseFrontmatterEntries = (frontmatter: string): FrontmatterEntry[] => {
+  return frontmatter
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"))
+    .map((line) => {
+      const index = line.indexOf(":");
+      if (index === -1) {
+        return { key: line, value: "" };
+      }
+      const key = line.slice(0, index).trim();
+      const value = line.slice(index + 1).trim();
+      return { key, value };
+    })
+    .filter((entry) => entry.key.length > 0);
+};
+
+/**
+ * Rehype plugin that converts YAML frontmatter into a table.
+ */
+const rehypeFrontmatterTable = () => {
+  return (tree: { type: string; children?: unknown[] }) => {
+    let handled = false;
+    visit(tree, (node, index, parent) => {
+      if (handled || !isRecord(node) || node["type"] !== "element") {
+        return;
+      }
+      if (!parent || typeof index !== "number" || !isRecord(parent)) {
+        return;
+      }
+      const element = node as HastElement;
+      if (element.tagName !== "div") {
+        return;
+      }
+      const properties = element.properties ?? {};
+      const rawValue =
+        (typeof properties["data-frontmatter"] === "string" && properties["data-frontmatter"]) ||
+        (typeof properties["dataFrontmatter"] === "string" && properties["dataFrontmatter"]) ||
+        "";
+      if (!rawValue) {
+        return;
+      }
+
+      const entries = parseFrontmatterEntries(rawValue);
+      const rows =
+        entries.length > 0
+          ? entries.map((entry) => ({
+              type: "element",
+              tagName: "tr",
+              properties: {},
+              children: [
+                {
+                  type: "element",
+                  tagName: "th",
+                  properties: {},
+                  children: [{ type: "text", value: entry.key }],
+                },
+                {
+                  type: "element",
+                  tagName: "td",
+                  properties: {},
+                  children: [{ type: "text", value: entry.value }],
+                },
+              ],
+            }))
+          : [
+              {
+                type: "element",
+                tagName: "tr",
+                properties: {},
+                children: [
+                  {
+                    type: "element",
+                    tagName: "th",
+                    properties: {},
+                    children: [{ type: "text", value: "raw" }],
+                  },
+                  {
+                    type: "element",
+                    tagName: "td",
+                    properties: {},
+                    children: [{ type: "text", value: rawValue }],
+                  },
+                ],
+              },
+            ];
+
+      const section = {
+        type: "element",
+        tagName: "section",
+        properties: { className: "frontmatter" },
+        children: [
+          {
+            type: "element",
+            tagName: "div",
+            properties: { className: "frontmatter-title" },
+            children: [{ type: "text", value: "Frontmatter" }],
+          },
+          {
+            type: "element",
+            tagName: "table",
+            properties: {},
+            children: [
+              {
+                type: "element",
+                tagName: "tbody",
+                properties: {},
+                children: rows,
+              },
+            ],
+          },
+        ],
+      };
+
+      const parentNode = parent as { children?: unknown[] };
+      if (!Array.isArray(parentNode.children)) {
+        return;
+      }
+      parentNode.children.splice(index, 1, section);
+      handled = true;
+      return [SKIP, index + 1];
+    });
+  };
+};
 
 /**
  * Checks if a node is a text node.
@@ -188,8 +329,25 @@ export const renderMarkdown = async (
 ): Promise<string> => {
   const file = await unified()
     .use(remarkParse)
+    .use(remarkFrontmatter, ["yaml"])
     .use(remarkWikiLink, { resolveWikiLink })
-    .use(remarkRehype)
+    .use(remarkRehype, {
+      handlers: {
+        yaml(state, node) {
+          const value = typeof node.value === "string" ? node.value : "";
+          return {
+            type: "element",
+            tagName: "div",
+            properties: {
+              className: ["frontmatter-raw"],
+              "data-frontmatter": value,
+            },
+            children: [],
+          };
+        },
+      },
+    })
+    .use(rehypeFrontmatterTable)
     .use(rehypeShiki, {
       theme: "github-light",
       langs: [

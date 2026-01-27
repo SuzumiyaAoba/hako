@@ -53,7 +53,7 @@ export default async function NotesDetailPage({
   const notes = await getNotes();
   const titleMap = buildTitleMap(notes);
   const backlinks = buildBacklinks(notes, note.title);
-  const content = note.content.trim();
+  const content = (note.content ?? "").trim();
   const html = content
     ? await renderMarkdown(content, (title, label) => {
         const target = titleMap.get(title);
@@ -110,6 +110,44 @@ export default async function NotesDetailPage({
       background: transparent;
       padding: 0;
       color: inherit;
+    }
+    .frontmatter {
+      margin-top: 1.25rem;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .frontmatter-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+    .frontmatter table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      color: #1e293b;
+    }
+    .frontmatter th,
+    .frontmatter td {
+      text-align: left;
+      padding: 0.35rem 0.5rem;
+      border-top: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+    .frontmatter th {
+      width: 30%;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .frontmatter td {
+      color: #334155;
+      white-space: pre-wrap;
     }
     .note-content a { color: #2563eb; }
     .note-content hr {
