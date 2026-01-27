@@ -20,6 +20,9 @@ importers:
       oxlint:
         specifier: ^1.41.0
         version: 1.41.0
+      tsx:
+        specifier: ^4.19.0
+        version: 4.19.0
 
   packages/api:
     dependencies:
