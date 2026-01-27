@@ -135,26 +135,56 @@ const importNotes = async (baseUrl: string, imports: NoteImport[]): Promise<void
 };
 
 /**
+ * Sends a reindex request.
+ */
+const reindexNotes = async (baseUrl: string): Promise<void> => {
+  const response = await fetch(`${baseUrl}/notes/reindex`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`Reindex failed: ${response.status} ${response.statusText} ${body}`);
+  }
+
+  const payload: unknown = await response.json();
+  console.log(JSON.stringify(payload, null, 2));
+};
+
+/**
  * Entry point.
  */
 const main = async (): Promise<void> => {
-  const [targetDir] = process.argv.slice(2);
-  if (!targetDir) {
-    console.error("Usage: npm run notes:import -- <dir>");
-    process.exit(1);
-  }
-
+  const [command, targetDir] = process.argv.slice(2);
   const baseUrl = process.env["HAKO_API_BASE_URL"] ?? DEFAULT_API_BASE_URL;
-  const root = resolve(targetDir);
-  const files = await collectMarkdownFiles(root);
 
-  if (files.length === 0) {
-    console.log("No markdown files found.");
+  if (command === "reindex") {
+    await reindexNotes(baseUrl);
     return;
   }
 
-  const imports = await buildImports(files);
-  await importNotes(baseUrl, imports);
+  if (command === "import") {
+    if (!targetDir) {
+      console.error("Usage: npm run notes -- import <dir>");
+      process.exit(1);
+    }
+
+    const root = resolve(targetDir);
+    const files = await collectMarkdownFiles(root);
+
+    if (files.length === 0) {
+      console.log("No markdown files found.");
+      return;
+    }
+
+    const imports = await buildImports(files);
+    await importNotes(baseUrl, imports);
+    return;
+  }
+
+  console.error("Usage: npm run notes -- <import|reindex> [dir]");
+  process.exit(1);
 };
 
 main().catch((error: unknown) => {
