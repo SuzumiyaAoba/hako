@@ -59,6 +59,13 @@ type FrontmatterEntry = {
   value: string;
 };
 
+type HastElement = {
+  type: "element";
+  tagName: string;
+  properties?: Record<string, unknown>;
+  children?: unknown[];
+};
+
 /**
  * Builds a link node for a resolved wiki link.
  */
@@ -148,14 +155,26 @@ const rehypeFrontmatterTable = () => {
   return (tree: { type: string; children?: unknown[] }) => {
     let handled = false;
     visit(tree, (node, index, parent) => {
-      if (handled || !isRecord(node) || node["type"] !== "yaml") {
+      if (handled || !isRecord(node) || node["type"] !== "element") {
         return;
       }
       if (!parent || typeof index !== "number" || !isRecord(parent)) {
         return;
       }
-      const value = typeof node["value"] === "string" ? node["value"] : "";
-      const entries = value ? parseFrontmatterEntries(value) : [];
+      const element = node as HastElement;
+      if (element.tagName !== "div") {
+        return;
+      }
+      const properties = element.properties ?? {};
+      const rawValue =
+        (typeof properties["data-frontmatter"] === "string" && properties["data-frontmatter"]) ||
+        (typeof properties["dataFrontmatter"] === "string" && properties["dataFrontmatter"]) ||
+        "";
+      if (!rawValue) {
+        return;
+      }
+
+      const entries = parseFrontmatterEntries(rawValue);
       const rows =
         entries.length > 0
           ? entries.map((entry) => ({
@@ -193,7 +212,7 @@ const rehypeFrontmatterTable = () => {
                     type: "element",
                     tagName: "td",
                     properties: {},
-                    children: [{ type: "text", value }],
+                    children: [{ type: "text", value: rawValue }],
                   },
                 ],
               },
@@ -202,12 +221,12 @@ const rehypeFrontmatterTable = () => {
       const section = {
         type: "element",
         tagName: "section",
-        properties: { className: ["frontmatter"] },
+        properties: { className: "frontmatter" },
         children: [
           {
             type: "element",
             tagName: "div",
-            properties: { className: ["frontmatter-title"] },
+            properties: { className: "frontmatter-title" },
             children: [{ type: "text", value: "Frontmatter" }],
           },
           {
@@ -312,7 +331,22 @@ export const renderMarkdown = async (
     .use(remarkParse)
     .use(remarkFrontmatter, ["yaml"])
     .use(remarkWikiLink, { resolveWikiLink })
-    .use(remarkRehype, { passThrough: ["yaml"] })
+    .use(remarkRehype, {
+      handlers: {
+        yaml(state, node) {
+          const value = typeof node.value === "string" ? node.value : "";
+          return {
+            type: "element",
+            tagName: "div",
+            properties: {
+              className: ["frontmatter-raw"],
+              "data-frontmatter": value,
+            },
+            children: [],
+          };
+        },
+      },
+    })
     .use(rehypeFrontmatterTable)
     .use(rehypeShiki, {
       theme: "github-light",
