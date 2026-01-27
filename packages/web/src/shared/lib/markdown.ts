@@ -2,7 +2,7 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
 import { visit, SKIP } from "unist-util-visit";
 
 import { extractWikiLinks, type WikiLink } from "./wiki-links";
@@ -136,12 +136,15 @@ export const renderMarkdown = async (
   content: string,
   resolveWikiLink: ResolveWikiLink,
 ): Promise<string> => {
-  const sanitizedSchema = {
+  const sanitizedSchema: SanitizeSchema = {
     ...defaultSchema,
     attributes: {
       ...defaultSchema.attributes,
       "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
-      a: [...(defaultSchema.attributes?.a ?? []), ["className", /^wiki-link(\s+unresolved)?$/]],
+      ["a"]: [
+        ...(defaultSchema.attributes?.["a"] ?? []),
+        ["className", /^wiki-link(\s+unresolved)?$/],
+      ],
     },
   };
   const file = await unified()
