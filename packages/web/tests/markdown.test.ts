@@ -103,4 +103,16 @@ describe("renderMarkdown", () => {
     expect(html).toContain("background-color");
     expect(html).toContain("color:");
   });
+
+  it("renders frontmatter as a table", async () => {
+    const html = await renderMarkdown(
+      ["---", "title: Sample", "tags: demo", "---", "", "# Heading"].join("\n"),
+      (_title, label) => ({ href: null, label }),
+    );
+
+    expect(html).toContain("frontmatter");
+    expect(html).toContain("<table>");
+    expect(html).toContain("title");
+    expect(html).toContain("Sample");
+  });
 });
