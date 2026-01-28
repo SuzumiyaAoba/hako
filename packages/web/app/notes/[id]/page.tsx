@@ -155,6 +155,16 @@ export default async function NotesDetailPage({
       color: #334155;
       white-space: pre-wrap;
     }
+    .frontmatter-list {
+      margin: 0.1rem 0;
+      padding-left: 1.25rem;
+    }
+    .frontmatter-list li {
+      margin: 0.15rem 0;
+    }
+    .frontmatter-list li::marker {
+      color: #94a3b8;
+    }
     .note-content a { color: #2563eb; }
     .note-content hr {
       border: none;

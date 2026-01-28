@@ -125,4 +125,19 @@ describe("renderMarkdown", () => {
     expect(html).toContain("frontmatter");
     expect(html).toContain("Sample");
   });
+
+  it("renders frontmatter arrays as lists", async () => {
+    const html = await renderMarkdown(
+      ["---", "tags:", "- alpha", "- beta", "aliases: [one, two]", "---", "", "# Heading"].join(
+        "\n",
+      ),
+      (_title, label) => ({ href: null, label }),
+    );
+
+    expect(html).toContain("frontmatter-list");
+    expect(html).toContain("<li>alpha</li>");
+    expect(html).toContain("<li>beta</li>");
+    expect(html).toContain("<li>one</li>");
+    expect(html).toContain("<li>two</li>");
+  });
 });

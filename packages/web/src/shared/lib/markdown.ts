@@ -56,7 +56,7 @@ type RootNode = {
 
 type FrontmatterEntry = {
   key: string;
-  value: string;
+  value: string | string[];
 };
 
 /**
@@ -143,21 +143,69 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /**
  * Parses frontmatter into key/value entries (simple YAML).
  */
+const parseInlineArray = (value: string): string[] | null => {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
+    return null;
+  }
+  const inner = trimmed.slice(1, -1).trim();
+  if (!inner) {
+    return [];
+  }
+  return inner
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+};
+
 const parseFrontmatterEntries = (frontmatter: string): FrontmatterEntry[] => {
-  return frontmatter
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith("#"))
-    .map((line) => {
-      const index = line.indexOf(":");
-      if (index === -1) {
-        return { key: line, value: "" };
+  const entries: FrontmatterEntry[] = [];
+  let current: FrontmatterEntry | null = null;
+
+  for (const rawLine of frontmatter.split("\n")) {
+    const line = rawLine.trim();
+    if (line.length === 0 || line.startsWith("#")) {
+      continue;
+    }
+
+    if (line.startsWith("-")) {
+      const item = line.replace(/^-+\s*/, "").trim();
+      if (current && item.length > 0) {
+        if (Array.isArray(current.value)) {
+          current.value = [...current.value, item];
+        } else if (current.value === "") {
+          current.value = [item];
+        } else {
+          current.value = [current.value, item];
+        }
+        continue;
       }
-      const key = line.slice(0, index).trim();
-      const value = line.slice(index + 1).trim();
-      return { key, value };
-    })
-    .filter((entry) => entry.key.length > 0);
+    }
+
+    const index = line.indexOf(":");
+    if (index === -1) {
+      const entry = { key: line, value: "" };
+      entries.push(entry);
+      current = entry;
+      continue;
+    }
+
+    const key = line.slice(0, index).trim();
+    if (key.length === 0) {
+      continue;
+    }
+    const rawValue = line.slice(index + 1).trim();
+    let value: string | string[] = "";
+    if (rawValue.length > 0) {
+      const arrayValue = parseInlineArray(rawValue);
+      value = arrayValue ?? rawValue;
+    }
+    const entry = { key, value };
+    entries.push(entry);
+    current = entry;
+  }
+
+  return entries;
 };
 
 /**
@@ -204,7 +252,23 @@ const rehypeFrontmatterTable = () => {
                   type: "element",
                   tagName: "td",
                   properties: {},
-                  children: [{ type: "text", value: entry.value }],
+                  children: Array.isArray(entry.value)
+                    ? entry.value.length === 0
+                      ? [{ type: "text", value: "—" }]
+                      : [
+                          {
+                            type: "element",
+                            tagName: "ul",
+                            properties: { className: "frontmatter-list" },
+                            children: entry.value.map((item) => ({
+                              type: "element",
+                              tagName: "li",
+                              properties: {},
+                              children: [{ type: "text", value: item }],
+                            })),
+                          },
+                        ]
+                    : [{ type: "text", value: entry.value }],
                 },
               ],
             }))
