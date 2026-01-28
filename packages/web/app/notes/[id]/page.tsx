@@ -66,11 +66,17 @@ export default async function NotesDetailPage({
   const noteStyles = `
     .wiki-link { color: #2563eb; text-decoration: underline; }
     .wiki-link.unresolved { color: #9ca3af; text-decoration: dotted underline; }
+    .note-detail {
+      max-width: 760px;
+      margin: 0 auto;
+    }
     .note-content {
       line-height: 1.8;
       color: #111827;
       max-width: 720px;
       margin-top: 1.5rem;
+      margin-left: auto;
+      margin-right: auto;
     }
     .note-content > :first-child { margin-top: 0; }
     .note-content h1, .note-content h2, .note-content h3 {
@@ -160,37 +166,39 @@ export default async function NotesDetailPage({
   return (
     <main style={{ padding: "2rem", fontFamily: "ui-sans-serif, system-ui" }}>
       <style dangerouslySetInnerHTML={{ __html: noteStyles }} />
-      <p>
-        <Link href="/notes">← 一覧へ戻る</Link>
-      </p>
-      <h1>{note.title}</h1>
-      <p style={{ color: "#6b7280" }}>{note.path}</p>
-      {content ? (
-        <article className="note-content" dangerouslySetInnerHTML={{ __html: html }} />
-      ) : (
-        <p>ノートの内容がまだ読み込まれていません。</p>
-      )}
-      <section style={{ marginTop: "2rem" }}>
-        <h2>バックリンク</h2>
-        {backlinks.length === 0 ? (
-          <p>バックリンクはありません。</p>
+      <div className="note-detail">
+        <p>
+          <Link href="/notes">← 一覧へ戻る</Link>
+        </p>
+        <h1>{note.title}</h1>
+        <p style={{ color: "#6b7280" }}>{note.path}</p>
+        {content ? (
+          <article className="note-content" dangerouslySetInnerHTML={{ __html: html }} />
         ) : (
-          <ul>
-            {backlinks.map((link) => {
-              const target = titleMap.get(link.title);
-              return (
-                <li key={link.title}>
-                  {target ? (
-                    <Link href={`/notes/${target.id}`}>{link.label}</Link>
-                  ) : (
-                    <span>{link.label}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <p>ノートの内容がまだ読み込まれていません。</p>
         )}
-      </section>
+        <section style={{ marginTop: "2rem" }}>
+          <h2>バックリンク</h2>
+          {backlinks.length === 0 ? (
+            <p>バックリンクはありません。</p>
+          ) : (
+            <ul>
+              {backlinks.map((link) => {
+                const target = titleMap.get(link.title);
+                return (
+                  <li key={link.title}>
+                    {target ? (
+                      <Link href={`/notes/${target.id}`}>{link.label}</Link>
+                    ) : (
+                      <span>{link.label}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
     </main>
   );
 }
