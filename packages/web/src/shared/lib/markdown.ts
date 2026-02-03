@@ -143,6 +143,13 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /**
  * Parses frontmatter into key/value entries (simple YAML).
  */
+const stripWrappingQuotes = (value: string): string => {
+  if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+    return value.slice(1, -1);
+  }
+  return value;
+};
+
 const parseInlineArray = (value: string): string[] | null => {
   const trimmed = value.trim();
   if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
@@ -154,7 +161,7 @@ const parseInlineArray = (value: string): string[] | null => {
   }
   return inner
     .split(",")
-    .map((item) => item.trim())
+    .map((item) => stripWrappingQuotes(item.trim()))
     .filter((item) => item.length > 0);
 };
 
@@ -169,7 +176,7 @@ const parseFrontmatterEntries = (frontmatter: string): FrontmatterEntry[] => {
     }
 
     if (line.startsWith("-")) {
-      const item = line.replace(/^-+\s*/, "").trim();
+      const item = stripWrappingQuotes(line.replace(/^-+\s*/, "").trim());
       if (current && item.length > 0) {
         if (Array.isArray(current.value)) {
           current.value = [...current.value, item];
@@ -198,7 +205,7 @@ const parseFrontmatterEntries = (frontmatter: string): FrontmatterEntry[] => {
     let value: string | string[] = "";
     if (rawValue.length > 0) {
       const arrayValue = parseInlineArray(rawValue);
-      value = arrayValue ?? rawValue;
+      value = arrayValue ?? stripWrappingQuotes(rawValue);
     }
     const entry = { key, value };
     entries.push(entry);
