@@ -6,7 +6,17 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo \"no lint configured\"",
+    "test": "echo \"no tests configured\""
+  },
   "dependencies": {
     "valibot": "^1.2.0"
+  },
+  "devDependencies": {
+    "@tsconfig/strictest": "^2.0.8",
+    "typescript": "5.5.4"
   }
 }
