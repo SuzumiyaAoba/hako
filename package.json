@@ -22,7 +22,7 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,md,json,yaml,yml}": [
-      "oxfmt",
+      "oxfmt --no-error-on-unmatched-pattern",
       "oxlint"
     ]
   },

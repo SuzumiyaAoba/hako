@@ -57,7 +57,9 @@ type RootNode = {
  * Builds a link node for a resolved wiki link.
  */
 const buildWikiLinkNode = (title: string, label: string, href: string | null): LinkNode => {
-  const className = href ? "wiki-link" : "wiki-link unresolved";
+  const className = href
+    ? "wiki-link text-blue-600 underline decoration-blue-300 underline-offset-4"
+    : "wiki-link unresolved text-slate-400 underline decoration-dotted underline-offset-4";
   return {
     type: "link",
     url: href ?? "#",
@@ -172,10 +174,7 @@ const SANITIZED_SCHEMA: SanitizeSchema = {
     pre: [...(defaultSchema.attributes?.["pre"] ?? []), "style"],
     code: [...(defaultSchema.attributes?.["code"] ?? []), "style"],
     span: [...(defaultSchema.attributes?.["span"] ?? []), "style"],
-    ["a"]: [
-      ...(defaultSchema.attributes?.["a"] ?? []),
-      ["className", /^wiki-link(\s+unresolved)?$/],
-    ],
+    ["a"]: [...(defaultSchema.attributes?.["a"] ?? []), ["className", /^[\w\s-:]+$/]],
   },
 };
 

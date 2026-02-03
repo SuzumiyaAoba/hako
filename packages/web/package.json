@@ -28,15 +28,20 @@
     "valibot": "^1.2.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/typography": "^0.5.19",
     "@total-typescript/ts-reset": "^0.6.1",
     "@tsconfig/strictest": "^2.0.8",
     "@types/d3": "^7.4.3",
     "@types/node": "20.14.15",
     "@types/react": "18.3.4",
     "@types/react-dom": "18.3.0",
+    "autoprefixer": "^10.4.24",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.5",
     "jsdom": "^26.1.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18",
     "typescript": "5.5.4",
     "vitest": "^2.1.9"
   }

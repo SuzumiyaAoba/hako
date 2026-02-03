@@ -48,27 +48,82 @@ const extractFrontmatter = (content: string): { frontmatter: string | null; body
 /**
  * Parses frontmatter into key/value entries (simple YAML).
  */
+const stripWrappingQuotes = (value: string): string => {
+  if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+    return value.slice(1, -1);
+  }
+  return value;
+};
+
+const parseInlineArray = (value: string): string[] | null => {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
+    return null;
+  }
+  const inner = trimmed.slice(1, -1).trim();
+  if (!inner) {
+    return [];
+  }
+  return inner
+    .split(",")
+    .map((item) => stripWrappingQuotes(item.trim()))
+    .filter((item) => item.length > 0);
+};
+
 const parseFrontmatterEntries = (
   frontmatter: string | null,
-): Array<{ key: string; value: string }> => {
+): Array<{ key: string; value: string | string[] }> => {
   if (!frontmatter) {
     return [];
   }
 
-  return frontmatter
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith("#"))
-    .map((line) => {
-      const index = line.indexOf(":");
-      if (index === -1) {
-        return { key: line, value: "" };
+  const entries: Array<{ key: string; value: string | string[] }> = [];
+  let current: { key: string; value: string | string[] } | null = null;
+
+  for (const rawLine of frontmatter.split("\n")) {
+    const line = rawLine.trim();
+    if (line.length === 0 || line.startsWith("#")) {
+      continue;
+    }
+
+    if (line.startsWith("-")) {
+      const item = stripWrappingQuotes(line.replace(/^-+\s*/, "").trim());
+      if (current && item.length > 0) {
+        if (Array.isArray(current.value)) {
+          current.value = [...current.value, item];
+        } else if (current.value === "") {
+          current.value = [item];
+        } else {
+          current.value = [current.value, item];
+        }
+        continue;
       }
-      const key = line.slice(0, index).trim();
-      const value = line.slice(index + 1).trim();
-      return { key, value };
-    })
-    .filter((entry) => entry.key.length > 0);
+    }
+
+    const index = line.indexOf(":");
+    if (index === -1) {
+      const entry = { key: line, value: "" };
+      entries.push(entry);
+      current = entry;
+      continue;
+    }
+
+    const key = line.slice(0, index).trim();
+    if (key.length === 0) {
+      continue;
+    }
+    const rawValue = line.slice(index + 1).trim();
+    let value: string | string[] = "";
+    if (rawValue.length > 0) {
+      const arrayValue = parseInlineArray(rawValue);
+      value = arrayValue ?? stripWrappingQuotes(rawValue);
+    }
+    const entry = { key, value };
+    entries.push(entry);
+    current = entry;
+  }
+
+  return entries;
 };
 
 /**
@@ -93,11 +148,15 @@ export default async function NotesDetailPage({
 
   if (!note) {
     return (
-      <main style={{ padding: "2rem", fontFamily: "ui-sans-serif, system-ui" }}>
-        <h1>ノートが見つかりません</h1>
-        <p>
-          <Link href="/notes">一覧へ戻る</Link>
-        </p>
+      <main className="min-h-dvh bg-white px-6 py-8 font-sans text-pretty text-slate-900">
+        <div className="mx-auto max-w-3xl">
+          <h1 className="text-2xl font-semibold text-balance">ノートが見つかりません</h1>
+          <p className="mt-3 text-sm">
+            <Link className="text-blue-600 underline underline-offset-4" href="/notes">
+              一覧へ戻る
+            </Link>
+          </p>
+        </div>
       </main>
     );
   }
@@ -117,150 +176,78 @@ export default async function NotesDetailPage({
         };
       })
     : "";
-  const noteStyles = `
-    .wiki-link { color: #2563eb; text-decoration: underline; }
-    .wiki-link.unresolved { color: #9ca3af; text-decoration: dotted underline; }
-    .note-content {
-      line-height: 1.8;
-      color: #111827;
-      margin-top: 1.5rem;
-    }
-    .note-shell {
-      max-width: 720px;
-      margin: 1.5rem auto 0;
-    }
-    .note-content > :first-child { margin-top: 0; }
-    .note-content h1, .note-content h2, .note-content h3 {
-      margin: 1.6rem 0 0.8rem;
-      line-height: 1.3;
-    }
-    .note-content p { margin: 1rem 0; }
-    .note-content ul, .note-content ol {
-      margin: 1rem 0 1rem 1.25rem;
-      padding-left: 1rem;
-    }
-    .note-content li { margin: 0.4rem 0; }
-    .note-content blockquote {
-      margin: 1rem 0;
-      padding: 0.5rem 1rem;
-      border-left: 4px solid #e5e7eb;
-      color: #374151;
-      background: #f9fafb;
-    }
-    .note-content code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-        "Courier New", monospace;
-      font-size: 0.9em;
-      background: #f3f4f6;
-      padding: 0.1rem 0.25rem;
-      border-radius: 4px;
-    }
-    .note-content pre {
-      margin: 1rem 0;
-      padding: 0.75rem 1rem;
-      background: #0f172a;
-      color: #e2e8f0;
-      border-radius: 8px;
-      overflow-x: auto;
-    }
-    .note-content pre code {
-      background: transparent;
-      padding: 0;
-      color: inherit;
-    }
-    .frontmatter {
-      margin-top: 1.25rem;
-      padding: 0.75rem 1rem;
-      border-radius: 10px;
-      border: 1px solid #e2e8f0;
-      background: #f8fafc;
-      color: #0f172a;
-    }
-    .frontmatter-title {
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.02em;
-      color: #64748b;
-      margin-bottom: 0.5rem;
-    }
-    .frontmatter table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-      color: #1e293b;
-    }
-    .frontmatter th,
-    .frontmatter td {
-      text-align: left;
-      padding: 0.35rem 0.5rem;
-      border-top: 1px solid #e2e8f0;
-      vertical-align: top;
-    }
-    .frontmatter th {
-      width: 30%;
-      font-weight: 600;
-      color: #0f172a;
-    }
-    .frontmatter td {
-      color: #334155;
-      white-space: pre-wrap;
-    }
-    .note-content a { color: #2563eb; }
-    .note-content hr {
-      border: none;
-      border-top: 1px solid #e5e7eb;
-      margin: 1.5rem 0;
-    }
-  `;
-
   return (
-    <main style={{ padding: "2rem", fontFamily: "ui-sans-serif, system-ui" }}>
-      <style dangerouslySetInnerHTML={{ __html: noteStyles }} />
-      <p>
-        <Link href="/notes">← 一覧へ戻る</Link>
-      </p>
-      <div className="note-shell">
-        <h1>{note.title}</h1>
-        <p style={{ color: "#6b7280" }}>{note.path}</p>
+    <main className="min-h-dvh bg-white px-6 py-8 font-sans text-pretty text-slate-900">
+      <div className="mx-auto max-w-3xl">
+        <Link className="text-sm text-blue-600 underline underline-offset-4" href="/notes">
+          ← 一覧へ戻る
+        </Link>
+        <div className="mt-6">
+          <h1 className="text-3xl font-semibold text-balance">{note.title}</h1>
+          <p className="mt-1 text-sm text-slate-500">{note.path}</p>
+        </div>
         {frontmatter ? (
-          <section className="frontmatter">
-            <div className="frontmatter-title">Frontmatter</div>
+          <section className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-900">
+            <div className="text-xs font-semibold text-slate-500">Frontmatter</div>
             {frontmatterEntries.length > 0 ? (
-              <table>
+              <table className="mt-2 w-full text-sm text-slate-700 tabular-nums">
                 <tbody>
                   {frontmatterEntries.map((entry) => (
-                    <tr key={`${entry.key}-${entry.value}`}>
-                      <th>{entry.key}</th>
-                      <td>{entry.value}</td>
+                    <tr key={entry.key} className="border-t border-slate-200">
+                      <th className="w-1/3 py-1.5 pr-3 text-left align-top font-semibold text-slate-900">
+                        {entry.key}
+                      </th>
+                      <td className="py-1.5 text-left align-top text-slate-700">
+                        {Array.isArray(entry.value) ? (
+                          entry.value.length === 0 ? (
+                            <span className="text-slate-400">—</span>
+                          ) : (
+                            <ul className="list-disc space-y-1 pl-4 marker:text-slate-400">
+                              {entry.value.map((item) => (
+                                <li key={`${entry.key}-${item}`}>{item}</li>
+                              ))}
+                            </ul>
+                          )
+                        ) : (
+                          <span className="whitespace-pre-wrap">{entry.value}</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <div>{frontmatter}</div>
+              <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{frontmatter}</div>
             )}
           </section>
         ) : null}
         {content ? (
-          <article className="note-content" dangerouslySetInnerHTML={{ __html: html }} />
+          <article
+            className="prose prose-slate mt-6 max-w-none text-pretty prose-a:text-blue-600 prose-a:underline prose-a:decoration-blue-300 prose-a:underline-offset-4 prose-blockquote:border-l-4 prose-blockquote:border-slate-200 prose-blockquote:bg-slate-50 prose-blockquote:text-slate-600 prose-code:rounded prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5 prose-code:text-slate-900 prose-code:before:content-none prose-code:after:content-none prose-headings:text-balance prose-hr:border-slate-200 prose-li:my-1 prose-p:text-pretty prose-pre:overflow-x-auto prose-pre:rounded-lg prose-pre:px-4 prose-pre:py-3"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
         ) : (
-          <p>ノートの内容がまだ読み込まれていません。</p>
+          <p className="mt-6 text-sm text-slate-500">ノートの内容がまだ読み込まれていません。</p>
         )}
-        <section style={{ marginTop: "2rem" }}>
-          <h2>バックリンク</h2>
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold text-balance">バックリンク</h2>
           {backlinks.length === 0 ? (
-            <p>バックリンクはありません。</p>
+            <p className="mt-2 text-sm text-slate-500">バックリンクはありません。</p>
           ) : (
-            <ul>
+            <ul className="mt-2 space-y-1 text-sm text-slate-700">
               {backlinks.map((link) => {
                 const target = titleMap.get(link.title);
                 return (
                   <li key={link.title}>
                     {target ? (
-                      <Link href={`/notes/${target.id}`}>{link.label}</Link>
+                      <Link
+                        className="text-blue-600 underline underline-offset-4"
+                        href={`/notes/${target.id}`}
+                      >
+                        {link.label}
+                      </Link>
                     ) : (
-                      <span>{link.label}</span>
+                      <span className="text-slate-500">{link.label}</span>
                     )}
                   </li>
                 );
