@@ -58,8 +58,8 @@ type RootNode = {
  */
 const buildWikiLinkNode = (title: string, label: string, href: string | null): LinkNode => {
   const className = href
-    ? "text-blue-600 underline decoration-blue-300 underline-offset-4"
-    : "text-slate-400 underline decoration-dotted underline-offset-4";
+    ? "wiki-link text-blue-600 underline decoration-blue-300 underline-offset-4"
+    : "wiki-link unresolved text-slate-400 underline decoration-dotted underline-offset-4";
   return {
     type: "link",
     url: href ?? "#",
