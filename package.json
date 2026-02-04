@@ -6,18 +6,21 @@
   ],
   "scripts": {
     "prepare": "husky install",
-    "dev": "pnpm -r dev",
-    "build": "pnpm -r build",
+    "dev": "bun run --workspaces --if-present --parallel dev",
+    "build": "bun run --workspaces --if-present --parallel build",
     "notes": "tsx scripts/notes.ts",
     "lint": "oxlint .",
     "format": "oxfmt .",
-    "format:check": "oxfmt --check ."
+    "format:check": "oxfmt --check .",
+    "typecheck": "bun run --workspaces --if-present --parallel typecheck",
+    "test": "bun run --workspaces --if-present --parallel test"
   },
   "devDependencies": {
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "oxfmt": "^0.26.0",
     "oxlint": "^1.41.0",
+    "quansync": "^1.0.0",
     "tsx": "^4.19.0"
   },
   "lint-staged": {
@@ -26,5 +29,5 @@
       "oxlint"
     ]
   },
-  "packageManager": "pnpm@9.12.1"
+  "packageManager": "bun@1.3.8"
 }

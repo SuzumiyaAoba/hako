@@ -1,2 +1,5 @@
 #!/usr/bin/env sh
-pnpm lint-staged
+export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+bun x lint-staged
