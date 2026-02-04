@@ -85,12 +85,14 @@ describe("renderMarkdown", () => {
 
   it("sanitizes unsafe html and urls", async () => {
     const html = await renderMarkdown(
-      "<script>alert(1)</script> [x](javascript:alert(1))",
+      '<script>alert(1)</script> [x](javascript:alert(1)) <img src="x" onerror="alert(1)" /> <div onclick="alert(1)">tap</div>',
       (_title, label) => ({ href: null, label }),
     );
 
     expect(html).not.toContain("<script");
     expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("onerror=");
+    expect(html).not.toContain("onclick=");
   });
 
   it("renders code blocks with themed pre style", async () => {

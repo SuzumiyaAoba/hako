@@ -1,4 +1,5 @@
 import { createHighlighter, bundledLanguagesInfo } from "shiki";
+import sanitizeHtml from "sanitize-html";
 
 /**
  * Resolves a wiki link title and label to a final link target.
@@ -113,9 +114,64 @@ const replaceWikiLinksWithHtml = (content: string, resolveWikiLink: ResolveWikiL
 };
 
 const sanitizeRenderedHtml = (html: string): string =>
-  html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/\s(href|src)\s*=\s*(['"])\s*(javascript|data|vbscript):[\s\S]*?\2/gi, ' $1="#"');
+  sanitizeHtml(html, {
+    allowedTags: [
+      "a",
+      "b",
+      "blockquote",
+      "br",
+      "code",
+      "del",
+      "div",
+      "em",
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+      "hr",
+      "i",
+      "kbd",
+      "li",
+      "ol",
+      "p",
+      "pre",
+      "s",
+      "span",
+      "strong",
+      "sub",
+      "sup",
+      "table",
+      "tbody",
+      "td",
+      "th",
+      "thead",
+      "tr",
+      "u",
+      "ul",
+    ],
+    allowedAttributes: {
+      a: ["href", "title", "class"],
+      code: ["class"],
+      pre: ["class", "tabindex", "style"],
+      span: ["class", "style"],
+      th: ["align"],
+      td: ["align"],
+    },
+    allowedClasses: {
+      a: ["wiki-link", "unresolved", "line"],
+      pre: ["shiki", "github-light", "catppuccin-latte"],
+      code: ["language-*"],
+      span: ["line"],
+    },
+    allowedSchemes: ["http", "https", "mailto", "tel"],
+    allowProtocolRelative: false,
+    disallowedTagsMode: "discard",
+    parser: {
+      lowerCaseAttributeNames: true,
+    },
+  });
 
 const decodeHtml = (value: string): string =>
   value

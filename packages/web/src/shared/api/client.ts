@@ -1,9 +1,18 @@
 import { parse, type GenericSchema, type InferOutput } from "valibot";
 
-export const apiBaseUrl =
-  process.env["HAKO_API_BASE_URL"] ??
-  process.env["NEXT_PUBLIC_API_BASE_URL"] ??
-  "http://localhost:8787";
+const resolveApiBaseUrl = (): string => {
+  const primary = process.env["HAKO_API_BASE_URL"]?.trim();
+  if (primary) {
+    return primary;
+  }
+  const secondary = process.env["NEXT_PUBLIC_API_BASE_URL"]?.trim();
+  if (secondary) {
+    return secondary;
+  }
+  return "http://localhost:8787";
+};
+
+export const apiBaseUrl = resolveApiBaseUrl();
 
 /**
  * Fetch JSON from the API and validate it with a Valibot schema.

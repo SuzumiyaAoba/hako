@@ -137,8 +137,8 @@ const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.E
               {Array.isArray(entry.value) ? (
                 entry.value.length > 0 ? (
                   <div className="frontmatter-pill-list">
-                    {entry.value.map((item) => (
-                      <span key={`${entry.key}-${item}`} className="frontmatter-pill">
+                    {entry.value.map((item, index) => (
+                      <span key={`${entry.key}-${index}-${item}`} className="frontmatter-pill">
                         {item}
                       </span>
                     ))}
