@@ -35,7 +35,7 @@ const STYLE_TEXT = `
 body{margin:0;color:var(--ink);background:var(--bg)}
 *,*::before,*::after{box-sizing:border-box}
 header{width:100%;padding:20px clamp(18px,3.6vw,56px) 10px}
-main{width:100%;margin:0;padding:30px 32px 48px;background:var(--surface);line-height:1.9;overflow-x:hidden;border-radius:16px}
+main{width:100%;margin:0 0 48px;padding:30px 32px 48px;background:var(--surface);line-height:1.9;overflow-x:hidden;border-radius:16px}
 a{color:var(--accent)}
 h1{margin-top:0}
 pre{overflow-x:auto;border-radius:6px}
@@ -95,14 +95,14 @@ details[open] .frontmatter-toggle::before{content:"▾"}
 .markdown-content li{margin:.35em 0}
 .markdown-content blockquote{margin:1em 0;padding:.5em 1em;border-left:3px solid var(--line-strong);background:var(--subtle-bg);color:#475569}
 .markdown-content hr{border:0;border-top:1px solid var(--subtle-line);margin:1.6em 0}
-.markdown-content code{background:var(--accent-soft);padding:.12em .36em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em}
-.markdown-content pre{max-width:100%;overflow-x:auto;padding:12px;background:#1b1f24;border:1px solid #2b323b}
+.markdown-content code{background:var(--accent-soft);color:#ec4899;padding:.12em .36em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em}
+.markdown-content pre{max-width:100%;overflow-x:auto;padding:12px;background:#1b1f24;border:1px solid #2b323b;border-radius:0}
 .markdown-content pre code{background:transparent;padding:0}
 .markdown-content .shiki{max-width:100%;overflow-x:auto}
 .markdown-content table{width:100%;border-collapse:collapse;margin:1em 0}
 .markdown-content th,.markdown-content td{border:1px solid var(--subtle-line);padding:.45em .6em;text-align:left}
-.markdown-content a{text-decoration:underline;text-underline-offset:3px}
-.markdown-content a.wiki-link{color:var(--accent)}
+.markdown-content a{text-decoration:none;color:#0284c7}
+.markdown-content a.wiki-link{color:#0284c7}
 .markdown-content a.wiki-link.unresolved{color:#9ca3af}
 .graph-panel{display:grid;grid-template-columns:1fr 1fr;gap:var(--space)}
 .graph-section{display:grid;gap:12px}
@@ -365,24 +365,7 @@ const renderPage = (
 
 const app = new Hono();
 
-app.get("/", (c) =>
-  c.html(
-    renderPage(
-      "Hako Web",
-      c.req.path,
-      <section className="page-grid">
-        <h1>Hako Web</h1>
-        <p className="muted">Hono + Bun + React SSR 版</p>
-        <p>
-          <a href="/notes">ノート一覧へ</a>
-        </p>
-        <p>
-          <a href="/graph">グラフを見る</a>
-        </p>
-      </section>,
-    ),
-  ),
-);
+app.get("/", (c) => c.redirect("/notes"));
 
 app.get("/notes", async (c) => {
   const notes = await getNotes();

@@ -17,7 +17,7 @@ const FENCED_CODE_BLOCK_PATTERN = /(```+|~~~+)([^\n]*)\n([\s\S]*?)\1/g;
 const INLINE_CODE_PATTERN = /(`+)([^\n]*?)\1/g;
 const CODE_BLOCK_HTML_PATTERN =
   /<pre><code(?: class="language-([^"]+)")?>([\s\S]*?)<\/code><\/pre>/g;
-const SHIKI_THEME = "catppuccin-latte";
+const SHIKI_THEME = "github-light";
 const BUN_MARKDOWN_OPTIONS: Bun.markdown.Options = {
   tables: true,
   strikethrough: true,
@@ -161,7 +161,7 @@ const sanitizeRenderedHtml = (html: string): string =>
     },
     allowedClasses: {
       a: ["wiki-link", "unresolved", "line"],
-      pre: ["shiki", "github-light", "catppuccin-latte"],
+      pre: ["shiki", "github-light"],
       code: ["language-*"],
       span: ["line"],
     },
@@ -217,86 +217,6 @@ const highlightCodeBlocks = async (html: string): Promise<string> => {
   }
 };
 
-const renderFallbackMarkdown = (source: string): string => {
-  const codeBlocks: string[] = [];
-  const withCodePlaceholders = source.replace(
-    FENCED_CODE_BLOCK_PATTERN,
-    (_match: string, _fence: string, languageHint: string, code: string): string => {
-      const normalizedLanguage = normalizeLanguage(languageHint.trim() || undefined);
-      const className =
-        normalizedLanguage === "text" ? "" : ` class="language-${normalizedLanguage}"`;
-      const html = `<pre><code${className}>${escapeHtml(code)}</code></pre>`;
-      const token = `@@CODE_BLOCK_${codeBlocks.length}@@`;
-      codeBlocks.push(html);
-      return token;
-    },
-  );
-
-  const renderInline = (value: string): string =>
-    value
-      .replace(INLINE_CODE_PATTERN, (_match: string, _ticks: string, code: string) => {
-        return `<code>${escapeHtml(code)}</code>`;
-      })
-      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match: string, label: string, href: string) => {
-        const safeHref = sanitizeHref(href);
-        return `<a href="${escapeHtmlAttribute(safeHref)}">${label}</a>`;
-      })
-      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*([^*]+)\*/g, "<em>$1</em>");
-
-  const htmlBlocks = withCodePlaceholders
-    .split(/\n{2,}/)
-    .map((block) => block.trim())
-    .filter((block) => block.length > 0)
-    .map((block) => {
-      if (/^@@CODE_BLOCK_\d+@@$/.test(block)) {
-        return block;
-      }
-
-      const headingMatch = block.match(/^(#{1,6})\s+(.+)$/);
-      if (headingMatch) {
-        const level = headingMatch[1]?.length ?? 1;
-        const text = headingMatch[2] ?? "";
-        return `<h${level}>${renderInline(text)}</h${level}>`;
-      }
-
-      if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(block)) {
-        return "<hr>";
-      }
-
-      const quoteLines = block.split("\n");
-      if (quoteLines.every((line) => /^>\s?/.test(line))) {
-        const quoteText = quoteLines.map((line) => line.replace(/^>\s?/, "")).join("<br>");
-        return `<blockquote>${renderInline(quoteText)}</blockquote>`;
-      }
-
-      if (quoteLines.every((line) => /^[-*+]\s+/.test(line))) {
-        const items = quoteLines
-          .map((line) => line.replace(/^[-*+]\s+/, ""))
-          .map((item) => `<li>${renderInline(item)}</li>`)
-          .join("");
-        return `<ul>${items}</ul>`;
-      }
-
-      if (quoteLines.every((line) => /^\d+\.\s+/.test(line))) {
-        const items = quoteLines
-          .map((line) => line.replace(/^\d+\.\s+/, ""))
-          .map((item) => `<li>${renderInline(item)}</li>`)
-          .join("");
-        return `<ol>${items}</ol>`;
-      }
-
-      return `<p>${renderInline(block).replace(/\n/g, "<br>")}</p>`;
-    });
-
-  return htmlBlocks
-    .join("\n")
-    .replace(/@@CODE_BLOCK_(\d+)@@/g, (_match: string, index: string): string => {
-      const codeBlock = codeBlocks[Number(index)];
-      return codeBlock ?? "";
-    });
-};
-
 export const renderMarkdown = async (
   content: string,
   resolveWikiLink: ResolveWikiLink,
@@ -307,9 +227,10 @@ export const renderMarkdown = async (
       Bun?: { markdown?: { html?: (value: string, options?: Bun.markdown.Options) => string } };
     }
   ).Bun?.markdown?.html;
-  const html = renderToHtml
-    ? renderToHtml(source, BUN_MARKDOWN_OPTIONS)
-    : renderFallbackMarkdown(source);
+  if (!renderToHtml) {
+    throw new Error("Bun.markdown.html is not available");
+  }
+  const html = renderToHtml(source, BUN_MARKDOWN_OPTIONS);
   const safeHtml = sanitizeRenderedHtml(html);
   const highlighted = await highlightCodeBlocks(safeHtml);
   return highlighted;
