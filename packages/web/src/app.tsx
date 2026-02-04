@@ -15,14 +15,14 @@ const STYLE_TEXT = `
 body{margin:0;color:#0f172a;background:#f3f2ea}
 header{max-width:860px;margin:0 auto;padding:18px 20px 0}
 :root{--note-line-step:32px;--note-rule-offset:24px;--note-padding-top:16px}
-main{position:relative;max-width:860px;margin:0 auto;padding:var(--note-padding-top) 20px 48px;border:1px solid #d9d7cc;background-color:#fffef8;background-image:linear-gradient(to bottom,transparent calc(var(--note-rule-offset) - 1px),#d6e3ff calc(var(--note-rule-offset) - 1px) var(--note-rule-offset),transparent var(--note-rule-offset));background-size:100% var(--note-line-step);background-position:0 var(--note-padding-top);background-repeat:repeat-y;line-height:var(--note-line-step)}
+main{position:relative;max-width:860px;margin:0 auto;padding:var(--note-padding-top) 20px 48px;border:1px solid #d9d7cc;background-color:#fffef8;background-image:linear-gradient(to bottom,transparent calc(var(--note-rule-offset) - 1px),#d6e3ff calc(var(--note-rule-offset) - 1px) var(--note-rule-offset),transparent var(--note-rule-offset));background-size:100% var(--note-line-step);background-position:0 var(--note-padding-top);background-repeat:repeat-y;line-height:var(--note-line-step);overflow-x:hidden}
 main::before{content:"";position:absolute;top:0;bottom:0;left:72px;width:1px;background:#f3a5a5}
 a{color:#2563eb}pre{overflow-x:auto;border-radius:0}
-.muted{color:#64748b}
+.muted{color:#64748b;overflow-wrap:anywhere}
 .stack{display:grid;gap:var(--note-line-step)}
 .stack>li{margin:0}
-.page-grid{display:grid;gap:var(--note-line-step)}
-.page-grid>*{margin:0}
+.page-grid{display:grid;gap:var(--note-line-step);min-width:0;width:100%;overflow-x:hidden}
+.page-grid>*{margin:0;min-width:0;max-width:100%}
 .site-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px;padding:10px 0 14px;border-bottom:1px solid #dbe3ef}
 .site-brand{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:10px;color:#0f172a;text-decoration:none}
 .site-logo{display:inline-grid;place-items:center;width:28px;height:28px;border:1px solid #334155;background:#fff;font-weight:700;font-size:.8rem}
@@ -31,8 +31,8 @@ a{color:#2563eb}pre{overflow-x:auto;border-radius:0}
 .site-nav-link{display:inline-block;padding:4px 8px;border:1px solid #dbe3ef;color:#334155;text-decoration:none;font-size:.84rem}
 .site-nav-link[aria-current="page"]{background:#0f172a;color:#fff;border-color:#0f172a}
 .panel{border:1px solid #e2e8f0;background:#fff;border-radius:0;padding:14px}
-.notes-page{display:grid;gap:var(--note-line-step)}
-.notes-page>*{margin:0}
+.notes-page{display:grid;gap:var(--note-line-step);min-width:0;width:100%;overflow-x:hidden}
+.notes-page>*{margin:0;min-width:0;max-width:100%}
 .notes-page h1{font-size:1rem;line-height:var(--note-line-step)}
 .notes-search{display:grid;grid-template-columns:80px minmax(0,480px);align-items:center;gap:0 12px}
 .notes-search input{box-sizing:border-box;width:100%;max-width:480px;height:var(--note-line-step);padding:0 10px;border:1px solid #cbd5e1;background:#fff;font:inherit;line-height:1}
@@ -45,22 +45,24 @@ a{color:#2563eb}pre{overflow-x:auto;border-radius:0}
 .frontmatter-card:not([open]) .frontmatter-head{margin-bottom:0}
 .frontmatter-title{margin:0;font-size:.95rem;font-weight:700;color:#0f172a}
 .frontmatter-count{font-size:.75rem;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:0;padding:2px 8px}
-.frontmatter-grid{display:grid;gap:8px}.frontmatter-row{display:grid;grid-template-columns:minmax(110px,160px) 1fr;gap:10px;padding:6px 0}
+.frontmatter-grid{display:grid;gap:8px}.frontmatter-row{display:grid;grid-template-columns:minmax(110px,160px) minmax(0,1fr);gap:10px;padding:6px 0}
 .frontmatter-key{margin:0;color:#334155;font-size:.78rem;font-weight:700;text-transform:uppercase}
-.frontmatter-value{margin:0;color:#0f172a;font-size:.92rem;line-height:1.55}
-.frontmatter-pill-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,max-content));gap:6px}.frontmatter-pill{display:inline-block;color:#334155;background:#eef2ff;border:1px solid #dbeafe;border-radius:0;padding:2px 9px;font-size:.78rem}
+.frontmatter-value{min-width:0;margin:0;color:#0f172a;font-size:.92rem;line-height:1.55;overflow-wrap:anywhere}
+.frontmatter-pill-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px}
+.frontmatter-pill{display:inline-block;color:#334155;background:#eef2ff;border:1px solid #dbeafe;border-radius:0;padding:2px 9px;font-size:.78rem;overflow-wrap:anywhere}
 .frontmatter-raw{margin:0;padding:10px;border:1px solid #e2e8f0;border-radius:0;background:#f8fafc;color:#334155;font-size:.84rem}
 .frontmatter-toggle{cursor:pointer;list-style:none}
 .frontmatter-toggle::-webkit-details-marker{display:none}
 .frontmatter-toggle::marker{content:""}
 .frontmatter-toggle::before{content:"+";display:inline-block;width:1.2em;color:#334155}
 details[open] .frontmatter-toggle::before{content:"-"}
-.markdown-content{line-height:var(--note-line-step);color:#0f172a}.markdown-content>:first-child{margin-top:0}.markdown-content>:last-child{margin-bottom:0}
+.markdown-content{line-height:var(--note-line-step);color:#0f172a;min-width:0;max-width:100%;overflow-x:hidden}.markdown-content>:first-child{margin-top:0}.markdown-content>:last-child{margin-bottom:0}
 .markdown-content h1,.markdown-content h2,.markdown-content h3,.markdown-content h4{line-height:var(--note-line-step);margin:0;color:#020617}
 .markdown-content p{margin:0}.markdown-content ul,.markdown-content ol{margin:0;padding-left:1.4em}.markdown-content li{margin:0}
 .markdown-content blockquote{margin:1em 0;padding:.6em .9em;border-left:4px solid #cbd5e1;background:#f8fafc;color:#475569}
 .markdown-content hr{border:0;border-top:1px solid #e2e8f0;margin:1.5em 0}.markdown-content code{background:#f1f5f9;border-radius:0;padding:.12em .36em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em}
-.markdown-content pre{padding:12px}.markdown-content pre code{background:transparent;padding:0;border-radius:0}.markdown-content table{width:100%;border-collapse:collapse;margin:1em 0}
+.markdown-content pre{max-width:100%;overflow-x:auto;padding:12px}.markdown-content pre code{background:transparent;padding:0;border-radius:0}.markdown-content table{width:100%;border-collapse:collapse;margin:1em 0}
+.markdown-content .shiki{max-width:100%;overflow-x:auto}
 .markdown-content th,.markdown-content td{border:1px solid #e2e8f0;padding:.45em .6em;text-align:left}
 .markdown-content a{text-decoration:none}.markdown-content a.wiki-link{color:#2563eb}.markdown-content a.wiki-link.unresolved{color:#94a3b8}
 .graph-panel{display:grid;grid-template-columns:1fr 1fr;gap:var(--note-line-step)}
@@ -190,6 +192,21 @@ const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.E
     </details>
   );
 };
+
+const MetadataCard = ({ path }: { path: string }): JSX.Element => (
+  <details className="frontmatter-card" open>
+    <summary className="frontmatter-head frontmatter-toggle">
+      <h2 className="frontmatter-title">Metadata</h2>
+      <span className="frontmatter-count">1 field</span>
+    </summary>
+    <div className="frontmatter-grid">
+      <div className="frontmatter-row">
+        <p className="frontmatter-key">FILE_PATH</p>
+        <div className="frontmatter-value">{path}</div>
+      </div>
+    </div>
+  </details>
+);
 
 const Header = ({ pathname }: { pathname: string }): JSX.Element => (
   <header>
@@ -363,7 +380,7 @@ app.get("/notes/:id", async (c) => {
           <a href="/notes">← 一覧へ戻る</a>
         </p>
         <h1>{note.title}</h1>
-        <p className="muted">{note.path}</p>
+        <MetadataCard path={note.path} />
         <FrontmatterCard frontmatter={frontmatter} />
         {rendered ? (
           <article className="markdown-content" dangerouslySetInnerHTML={{ __html: rendered }} />
