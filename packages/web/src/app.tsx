@@ -13,9 +13,17 @@ import { renderMarkdown } from "./shared/lib/markdown";
 const STYLE_TEXT = `
 :root{color-scheme:light;font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif}
 body{margin:0;color:#0f172a;background:linear-gradient(180deg,#f8fafc 0%,#fff 320px)}
+header{max-width:860px;margin:0 auto;padding:18px 20px 0}
 main{max-width:860px;margin:0 auto;padding:24px 20px 48px}
 a{color:#2563eb}pre{overflow-x:auto;border-radius:0}
 .muted{color:#64748b}.stack{display:grid;gap:10px}
+.site-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0 14px;border-bottom:1px solid #dbe3ef}
+.site-brand{display:flex;align-items:center;gap:10px;color:#0f172a;text-decoration:none}
+.site-logo{display:inline-grid;place-items:center;width:28px;height:28px;border:1px solid #334155;background:#fff;font-weight:700;font-size:.8rem}
+.site-title{margin:0;font-size:1rem;font-weight:700;color:#0f172a}
+.site-nav{display:flex;align-items:center;gap:8px}
+.site-nav-link{display:inline-block;padding:4px 8px;border:1px solid #dbe3ef;color:#334155;text-decoration:none;font-size:.84rem}
+.site-nav-link[aria-current="page"]{background:#0f172a;color:#fff;border-color:#0f172a}
 .panel{border:1px solid #e2e8f0;background:#fff;border-radius:0;padding:14px}
 .frontmatter-card{border:1px solid #dbe3ef;background:#fff;border-radius:0;padding:14px;margin:16px 0;box-shadow:0 1px 2px rgba(15,23,42,.04)}
 .frontmatter-card:not([open]){padding-bottom:14px}
@@ -159,11 +167,45 @@ const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.E
   );
 };
 
+const Header = ({ pathname }: { pathname: string }): JSX.Element => (
+  <header>
+    <div className="site-header">
+      <a className="site-brand" href="/">
+        <span className="site-logo" aria-hidden="true">
+          箱
+        </span>
+        <p className="site-title">Hako</p>
+      </a>
+      <nav className="site-nav" aria-label="global">
+        <a className="site-nav-link" href="/" aria-current={pathname === "/" ? "page" : undefined}>
+          Home
+        </a>
+        <a
+          className="site-nav-link"
+          href="/notes"
+          aria-current={pathname.startsWith("/notes") ? "page" : undefined}
+        >
+          Notes
+        </a>
+        <a
+          className="site-nav-link"
+          href="/graph"
+          aria-current={pathname.startsWith("/graph") ? "page" : undefined}
+        >
+          Graph
+        </a>
+      </nav>
+    </div>
+  </header>
+);
+
 const HtmlPage = ({
   title,
+  pathname,
   children,
 }: {
   title: string;
+  pathname: string;
   children: React.ReactNode;
 }): JSX.Element => (
   <html lang="ja">
@@ -180,13 +222,18 @@ const HtmlPage = ({
       <style>{STYLE_TEXT}</style>
     </head>
     <body>
+      <Header pathname={pathname} />
       <main>{children}</main>
     </body>
   </html>
 );
 
-const renderPage = (title: string, content: React.ReactNode): string =>
-  `<!doctype html>${renderToStaticMarkup(<HtmlPage title={title}>{content}</HtmlPage>)}`;
+const renderPage = (title: string, pathname: string, content: React.ReactNode): string =>
+  `<!doctype html>${renderToStaticMarkup(
+    <HtmlPage title={title} pathname={pathname}>
+      {content}
+    </HtmlPage>,
+  )}`;
 
 const app = new Hono();
 
@@ -194,6 +241,7 @@ app.get("/", (c) =>
   c.html(
     renderPage(
       "Hako Web",
+      c.req.path,
       <>
         <h1>Hako Web</h1>
         <p className="muted">Hono + Bun + React SSR 版</p>
@@ -216,6 +264,7 @@ app.get("/notes", async (c) => {
   return c.html(
     renderPage(
       "ノート一覧",
+      c.req.path,
       <>
         <h1>ノート一覧</h1>
         <form style={{ marginBottom: "12px" }}>
@@ -258,6 +307,7 @@ app.get("/notes/:id", async (c) => {
     return c.html(
       renderPage(
         "ノートが見つかりません",
+        c.req.path,
         <>
           <h1>ノートが見つかりません</h1>
           <p>
@@ -284,6 +334,7 @@ app.get("/notes/:id", async (c) => {
   return c.html(
     renderPage(
       note.title,
+      c.req.path,
       <>
         <p>
           <a href="/notes">← 一覧へ戻る</a>
@@ -328,6 +379,7 @@ app.get("/graph", async (c) => {
   return c.html(
     renderPage(
       "ノートグラフ",
+      c.req.path,
       <>
         <p>
           <a href="/notes">← 一覧へ戻る</a>
@@ -340,9 +392,7 @@ app.get("/graph", async (c) => {
             <h2>Nodes</h2>
             <ul className="stack">
               {graph.nodes.map((node) => (
-                <li key={node.id}>
-                  {node.title} <span className="muted">({node.id})</span>
-                </li>
+                <li key={node.id}>{node.title}</li>
               ))}
             </ul>
             <h2>Links</h2>
