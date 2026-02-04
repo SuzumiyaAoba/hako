@@ -38,7 +38,7 @@ details[open] .frontmatter-toggle::before{content:"-"}
 .markdown-content p{margin:.8em 0}.markdown-content ul,.markdown-content ol{margin:.8em 0;padding-left:1.4em}.markdown-content li{margin:.25em 0}
 .markdown-content blockquote{margin:1em 0;padding:.6em .9em;border-left:4px solid #cbd5e1;background:#f8fafc;color:#475569}
 .markdown-content hr{border:0;border-top:1px solid #e2e8f0;margin:1.5em 0}.markdown-content code{background:#f1f5f9;border-radius:0;padding:.12em .36em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em}
-.markdown-content pre code{background:transparent;padding:0;border-radius:0}.markdown-content table{width:100%;border-collapse:collapse;margin:1em 0}
+.markdown-content pre{padding:12px}.markdown-content pre code{background:transparent;padding:0;border-radius:0}.markdown-content table{width:100%;border-collapse:collapse;margin:1em 0}
 .markdown-content th,.markdown-content td{border:1px solid #e2e8f0;padding:.45em .6em;text-align:left}
 .markdown-content a{text-decoration:none}.markdown-content a.wiki-link{color:#2563eb}.markdown-content a.wiki-link.unresolved{color:#94a3b8}
 `;

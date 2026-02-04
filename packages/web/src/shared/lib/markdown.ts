@@ -16,6 +16,7 @@ const FENCED_CODE_BLOCK_PATTERN = /(```+|~~~+)([^\n]*)\n([\s\S]*?)\1/g;
 const INLINE_CODE_PATTERN = /(`+)([^\n]*?)\1/g;
 const CODE_BLOCK_HTML_PATTERN =
   /<pre><code(?: class="language-([^"]+)")?>([\s\S]*?)<\/code><\/pre>/g;
+const SHIKI_THEME = "catppuccin-latte";
 const BUN_MARKDOWN_OPTIONS: Bun.markdown.Options = {
   tables: true,
   strikethrough: true,
@@ -34,10 +35,12 @@ const BUN_MARKDOWN_OPTIONS: Bun.markdown.Options = {
   headings: true,
 };
 
-const SUPPORTED_LANGUAGES = new Set(bundledLanguagesInfo.map((language) => language.id));
+const SUPPORTED_LANGUAGES = new Set(
+  bundledLanguagesInfo.flatMap((language) => [language.id, ...(language.aliases ?? [])]),
+);
 
 const highlighterPromise = createHighlighter({
-  themes: ["github-light"],
+  themes: [SHIKI_THEME],
   langs: [...SUPPORTED_LANGUAGES],
 });
 
@@ -114,12 +117,6 @@ const sanitizeRenderedHtml = (html: string): string =>
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
     .replace(/\s(href|src)\s*=\s*(['"])\s*(javascript|data|vbscript):[\s\S]*?\2/gi, ' $1="#"');
 
-const applyCodeBlockTheme = (html: string): string =>
-  html.replace(
-    /<pre>/g,
-    '<pre style="background-color: #f6f8fa; color: #24292f; padding: 0.75rem; border-radius: 0.5rem; overflow-x: auto;">',
-  );
-
 const decodeHtml = (value: string): string =>
   value
     .replace(/&lt;/g, "<")
@@ -154,7 +151,7 @@ const highlightCodeBlocks = async (html: string): Promise<string> => {
       const code = decodeHtml(block[2] ?? "");
       const highlighted = highlighter.codeToHtml(code, {
         lang: language,
-        theme: "github-light",
+        theme: SHIKI_THEME,
       });
       output = output.replace(whole, highlighted);
     }
@@ -180,5 +177,5 @@ export const renderMarkdown = async (
   const html = renderToHtml(source, BUN_MARKDOWN_OPTIONS);
   const safeHtml = sanitizeRenderedHtml(html);
   const highlighted = await highlightCodeBlocks(safeHtml);
-  return applyCodeBlockTheme(highlighted);
+  return highlighted;
 };
