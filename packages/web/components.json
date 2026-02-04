@@ -3,7 +3,13 @@
   "style": "default",
   "rsc": false,
   "tsx": true,
-  "css": "src/styles/globals.css",
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "src/styles/globals.css",
+    "baseColor": "slate",
+    "cssVariables": false,
+    "prefix": ""
+  },
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils"

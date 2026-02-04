@@ -35,17 +35,28 @@ const STYLE_TEXT = `
 body{margin:0;color:var(--ink);background:var(--bg)}
 *,*::before,*::after{box-sizing:border-box}
 header{width:100%;padding:20px clamp(18px,3.6vw,56px) 10px}
-main{width:100%;margin:0;padding:30px clamp(18px,3.6vw,56px) 48px;background:var(--surface);line-height:1.9;overflow-x:hidden}
+main{width:100%;margin:0;padding:30px 32px 48px;background:var(--surface);line-height:1.9;overflow-x:hidden;border-radius:16px}
 a{color:var(--accent)}
+h1{margin-top:0}
 pre{overflow-x:auto;border-radius:6px}
 .muted{color:var(--ink-soft);overflow-wrap:anywhere}
 .stack{display:grid;gap:14px}
 .stack>li{margin:0}
+.content-shell{width:100%;display:grid;padding:0 clamp(18px,3.6vw,56px)}
+.content-shell.has-sidebar{grid-template-columns:280px minmax(0,1fr);gap:24px}
+.side-menu{position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:hidden;padding:10px 8px 10px 0;background:var(--bg)}
+.side-menu-nav{display:grid;grid-template-rows:auto minmax(0,1fr);height:100%}
+.side-menu-title{margin:0;padding:0 0 10px;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);background:var(--bg)}
+.side-menu-scroll{min-height:0;overflow-y:auto;overflow-x:hidden;padding-top:2px}
+.side-menu-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.side-menu-link{display:block;padding:7px 10px;border-radius:8px;color:var(--ink-soft);text-decoration:none;font-size:.85rem;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-menu-link:hover{background:var(--surface-soft);color:var(--ink)}
+.side-menu-link[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:700}
 .page-grid,.notes-page{display:grid;gap:var(--space);min-width:0;width:100%}
 .page-grid>*,.notes-page>*{margin:0;min-width:0;max-width:100%}
 .site-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px;padding:0 0 14px;background:transparent}
 .site-brand{display:grid;grid-template-columns:auto;align-items:center;color:var(--ink);text-decoration:none}
-.site-logo{display:grid;place-items:center;width:26px;height:26px;color:var(--ink-soft)}
+.site-logo{display:grid;place-items:center;width:34px;height:34px;color:var(--ink-soft)}
 .site-nav{display:grid;grid-auto-flow:column;column-gap:14px;align-items:center}
 .site-nav-link{display:inline-block;padding:6px 0;color:var(--ink-soft);text-decoration:none;font-size:.86rem;background:transparent}
 .site-nav-link[aria-current="page"]{color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:7px}
@@ -58,18 +69,18 @@ pre{overflow-x:auto;border-radius:6px}
 .notes-list li{margin:0}
 .notes-list a{display:block;line-height:1.7;text-decoration:none;border:1px solid var(--subtle-line);background:var(--surface);border-radius:10px;padding:11px 14px;transition:background-color .16s ease,border-color .16s ease}
 .notes-list a:hover{background:var(--surface-soft);border-color:var(--line-strong)}
-.frontmatter-card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px}
+.frontmatter-card{border:1px solid var(--line);border-radius:0;background:#fff;padding:14px}
 .frontmatter-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px}
 .frontmatter-card[open] .frontmatter-head{margin-bottom:10px}
-.frontmatter-title{margin:0;font-size:.96rem;font-weight:600;color:var(--ink)}
-.frontmatter-count{font-size:.75rem;color:var(--ink-soft);background:var(--surface-soft);border:1px solid var(--line);padding:2px 8px;border-radius:999px}
+.frontmatter-title{margin:0;font-size:.88rem;font-weight:600;color:var(--ink)}
+.frontmatter-count{font-size:.7rem;color:var(--ink-soft);background:var(--surface-soft);border:1px solid var(--line);padding:2px 8px;border-radius:0}
 .frontmatter-grid{display:grid;gap:10px}
 .frontmatter-row{display:grid;grid-template-columns:minmax(110px,160px) minmax(0,1fr);gap:10px;padding:4px 0}
-.frontmatter-key{margin:0;color:var(--ink-soft);font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
-.frontmatter-value{min-width:0;margin:0;color:var(--ink);font-size:.93rem;line-height:1.7;overflow-wrap:anywhere}
-.frontmatter-pill-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px}
-.frontmatter-pill{display:inline-block;color:#334155;background:var(--chip-bg);border:1px solid var(--chip-line);padding:2px 9px;font-size:.78rem;overflow-wrap:anywhere}
-.frontmatter-raw{margin:0;padding:10px;border:1px solid var(--subtle-line);background:var(--subtle-bg);color:#475569;font-size:.84rem}
+.frontmatter-key{margin:0;color:var(--ink-soft);font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+.frontmatter-value{min-width:0;margin:0;color:var(--ink);font-size:.86rem;line-height:1.7;overflow-wrap:anywhere}
+.frontmatter-pill-list{display:flex;flex-wrap:wrap;gap:6px}
+.frontmatter-pill{display:inline-block;color:#334155;background:var(--chip-bg);border:1px solid var(--chip-line);padding:2px 9px;font-size:.72rem;overflow-wrap:anywhere}
+.frontmatter-raw{margin:0;padding:10px;border:1px solid var(--subtle-line);background:var(--subtle-bg);color:#475569;font-size:.78rem}
 .frontmatter-toggle{cursor:pointer;list-style:none}
 .frontmatter-toggle::-webkit-details-marker{display:none}
 .frontmatter-toggle::marker{content:""}
@@ -97,8 +108,12 @@ details[open] .frontmatter-toggle::before{content:"▾"}
 .graph-section{display:grid;gap:12px}
 .graph-section h2{margin:0}
 @media (max-width:840px){
+  .content-shell.has-sidebar{grid-template-columns:1fr}
+  .side-menu{position:static;max-height:none;padding:0}
+  .side-menu-nav{height:auto}
+  .side-menu-scroll{overflow:visible}
   .site-header{grid-template-columns:1fr}
-  .site-nav{grid-template-columns:1fr 1fr 1fr;grid-auto-flow:unset;column-gap:10px}
+  .site-nav{grid-template-columns:1fr 1fr;grid-auto-flow:unset;column-gap:10px}
   .site-nav-link{padding:8px 0}
   .notes-search{grid-template-columns:1fr}
   .graph-panel{grid-template-columns:1fr}
@@ -239,15 +254,12 @@ const MetadataCard = ({ path }: { path: string }): JSX.Element => (
 const Header = ({ pathname }: { pathname: string }): JSX.Element => (
   <header>
     <div className="site-header">
-      <a className="site-brand" href="/">
+      <a className="site-brand" href="/" aria-label="トップページ">
         <span className="site-logo" aria-hidden="true">
-          <IoFileTrayFullOutline size={18} />
+          <IoFileTrayFullOutline size={24} />
         </span>
       </a>
       <nav className="site-nav" aria-label="global">
-        <a className="site-nav-link" href="/" aria-current={pathname === "/" ? "page" : undefined}>
-          Home
-        </a>
         <a
           className="site-nav-link"
           href="/notes"
@@ -267,13 +279,53 @@ const Header = ({ pathname }: { pathname: string }): JSX.Element => (
   </header>
 );
 
+const SideMenu = ({
+  notes,
+  pathname,
+}: {
+  notes: ReadonlyArray<Pick<Note, "id" | "title">>;
+  pathname: string;
+}): JSX.Element => (
+  <aside className="side-menu" aria-labelledby="notes-menu-title">
+    <nav className="side-menu-nav" aria-labelledby="notes-menu-title">
+      <h2 id="notes-menu-title" className="side-menu-title">
+        Notes
+      </h2>
+      <div className="side-menu-scroll">
+        {notes.length === 0 ? (
+          <p className="muted">ノートがありません。</p>
+        ) : (
+          <ul className="side-menu-list">
+            {notes.map((note) => {
+              const href = `/notes/${encodeURIComponent(note.id)}`;
+              return (
+                <li key={note.id}>
+                  <a
+                    className="side-menu-link"
+                    href={href}
+                    aria-current={pathname === href ? "page" : undefined}
+                  >
+                    {note.title}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </nav>
+  </aside>
+);
+
 const HtmlPage = ({
   title,
   pathname,
+  sidebarNotes,
   children,
 }: {
   title: string;
   pathname: string;
+  sidebarNotes?: ReadonlyArray<Pick<Note, "id" | "title">>;
   children: React.ReactNode;
 }): JSX.Element => (
   <html lang="ja">
@@ -291,14 +343,22 @@ const HtmlPage = ({
     </head>
     <body>
       <Header pathname={pathname} />
-      <main>{children}</main>
+      <div className={`content-shell${sidebarNotes ? " has-sidebar" : ""}`}>
+        {sidebarNotes ? <SideMenu notes={sidebarNotes} pathname={pathname} /> : null}
+        <main>{children}</main>
+      </div>
     </body>
   </html>
 );
 
-const renderPage = (title: string, pathname: string, content: React.ReactNode): string =>
+const renderPage = (
+  title: string,
+  pathname: string,
+  content: React.ReactNode,
+  sidebarNotes?: ReadonlyArray<Pick<Note, "id" | "title">>,
+): string =>
   `<!doctype html>${renderToStaticMarkup(
-    <HtmlPage title={title} pathname={pathname}>
+    <HtmlPage title={title} pathname={pathname} {...(sidebarNotes ? { sidebarNotes } : {})}>
       {content}
     </HtmlPage>,
   )}`;
@@ -349,20 +409,15 @@ app.get("/notes", async (c) => {
           {filtered.length} 件 / {notes.length} 件
         </p>
         {filtered.length === 0 ? (
-          <p>ノートがありません。</p>
+          <p>一致するノートがありません。</p>
         ) : (
-          <ul className="notes-list">
-            {filtered.map((note) => (
-              <li key={note.id}>
-                <a href={`/notes/${encodeURIComponent(note.id)}`}>{note.title}</a>
-              </li>
-            ))}
-          </ul>
+          <p className="muted">左の Notes から選択してください。</p>
         )}
         <p>
           <a href="/graph">グラフを見る</a>
         </p>
       </section>,
+      filtered,
     ),
   );
 });
@@ -377,9 +432,6 @@ app.get("/notes/:id", async (c) => {
         c.req.path,
         <>
           <h1>ノートが見つかりません</h1>
-          <p>
-            <a href="/notes">一覧へ戻る</a>
-          </p>
         </>,
       ),
       404,
@@ -403,9 +455,6 @@ app.get("/notes/:id", async (c) => {
       note.title,
       c.req.path,
       <section className="page-grid">
-        <p>
-          <a href="/notes">← 一覧へ戻る</a>
-        </p>
         <h1>{note.title}</h1>
         <MetadataCard path={note.path} />
         <FrontmatterCard frontmatter={frontmatter} />
@@ -436,6 +485,7 @@ app.get("/notes/:id", async (c) => {
           )}
         </section>
       </section>,
+      notes,
     ),
   );
 });
@@ -448,9 +498,6 @@ app.get("/graph", async (c) => {
       "ノートグラフ",
       c.req.path,
       <section className="page-grid">
-        <p>
-          <a href="/notes">← 一覧へ戻る</a>
-        </p>
         <h1>ノートグラフ</h1>
         {graph.nodes.length === 0 ? (
           <p>ノートがありません。</p>
@@ -477,6 +524,7 @@ app.get("/graph", async (c) => {
           </div>
         )}
       </section>,
+      notes,
     ),
   );
 });
