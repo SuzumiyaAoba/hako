@@ -18,7 +18,9 @@ a{color:#2563eb}pre{overflow-x:auto;border-radius:0}
 .muted{color:#64748b}.stack{display:grid;gap:10px}
 .panel{border:1px solid #e2e8f0;background:#fff;border-radius:0;padding:14px}
 .frontmatter-card{border:1px solid #dbe3ef;background:#fff;border-radius:0;padding:14px;margin:16px 0;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.frontmatter-card:not([open]){padding-bottom:14px}
 .frontmatter-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.frontmatter-card:not([open]) .frontmatter-head{margin-bottom:0}
 .frontmatter-title{margin:0;font-size:.95rem;font-weight:700;color:#0f172a}
 .frontmatter-count{font-size:.75rem;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:0;padding:2px 8px}
 .frontmatter-grid{display:grid;gap:8px}.frontmatter-row{display:grid;grid-template-columns:minmax(110px,160px) 1fr;gap:10px;padding:6px 0}
@@ -26,6 +28,11 @@ a{color:#2563eb}pre{overflow-x:auto;border-radius:0}
 .frontmatter-value{margin:0;color:#0f172a;font-size:.92rem;line-height:1.55}
 .frontmatter-pill-list{display:flex;flex-wrap:wrap;gap:6px}.frontmatter-pill{display:inline-block;color:#334155;background:#eef2ff;border:1px solid #dbeafe;border-radius:0;padding:2px 9px;font-size:.78rem}
 .frontmatter-raw{margin:0;padding:10px;border:1px solid #e2e8f0;border-radius:0;background:#f8fafc;color:#334155;font-size:.84rem}
+.frontmatter-toggle{cursor:pointer;list-style:none}
+.frontmatter-toggle::-webkit-details-marker{display:none}
+.frontmatter-toggle::marker{content:""}
+.frontmatter-toggle::before{content:"+";display:inline-block;width:1.2em;color:#334155}
+details[open] .frontmatter-toggle::before{content:"-"}
 .markdown-content{line-height:1.75;color:#0f172a}.markdown-content>:first-child{margin-top:0}.markdown-content>:last-child{margin-bottom:0}
 .markdown-content h1,.markdown-content h2,.markdown-content h3,.markdown-content h4{line-height:1.3;margin:1.2em 0 .5em;color:#020617}
 .markdown-content p{margin:.8em 0}.markdown-content ul,.markdown-content ol{margin:.8em 0;padding-left:1.4em}.markdown-content li{margin:.25em 0}
@@ -107,21 +114,21 @@ const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.E
   const entries = parseFrontmatterEntries(frontmatter);
   if (entries.length === 0) {
     return (
-      <section className="frontmatter-card">
-        <div className="frontmatter-head">
+      <details className="frontmatter-card" open>
+        <summary className="frontmatter-head frontmatter-toggle">
           <h2 className="frontmatter-title">Frontmatter</h2>
           <span className="frontmatter-count">raw</span>
-        </div>
+        </summary>
         <pre className="frontmatter-raw">{frontmatter}</pre>
-      </section>
+      </details>
     );
   }
   return (
-    <section className="frontmatter-card">
-      <div className="frontmatter-head">
+    <details className="frontmatter-card" open>
+      <summary className="frontmatter-head frontmatter-toggle">
         <h2 className="frontmatter-title">Frontmatter</h2>
         <span className="frontmatter-count">{entries.length} fields</span>
-      </div>
+      </summary>
       <div className="frontmatter-grid">
         {entries.map((entry) => (
           <div key={entry.key} className="frontmatter-row">
@@ -148,7 +155,7 @@ const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.E
           </div>
         ))}
       </div>
-    </section>
+    </details>
   );
 };
 
