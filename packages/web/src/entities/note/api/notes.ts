@@ -13,9 +13,7 @@ export const getNotes = async (): Promise<Note[]> => fetchJson("/notes", NotesSc
  */
 export const getNote = async (id: NoteId): Promise<Note | null> => {
   parse(NoteIdSchema, id);
-  const response = await fetch(`${apiBaseUrl}/notes/${encodeURIComponent(id)}`, {
-    cache: "no-store",
-  });
+  const response = await fetch(`${apiBaseUrl}/notes/${encodeURIComponent(id)}`);
   if (response.status === 404) {
     return null;
   }

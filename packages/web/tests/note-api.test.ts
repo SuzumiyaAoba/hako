@@ -25,7 +25,7 @@ describe("note api", () => {
       headers: { "content-type": "application/json" },
     });
     const fetchMock = vi.fn().mockResolvedValue(response);
-    globalThis.fetch = fetchMock;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     const result = await getNotes();
 
@@ -35,7 +35,7 @@ describe("note api", () => {
   it("getNote returns null on 404", async () => {
     const response = new Response("not found", { status: 404 });
     const fetchMock = vi.fn().mockResolvedValue(response);
-    globalThis.fetch = fetchMock;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     const result = await getNote(note.id);
 
@@ -49,7 +49,7 @@ describe("note api", () => {
       headers: { "content-type": "application/json" },
     });
     const fetchMock = vi.fn().mockResolvedValue(response);
-    globalThis.fetch = fetchMock;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     await expect(getNote(note.id)).rejects.toThrow();
   });

@@ -1,10 +1,5 @@
-import { unified } from "unified";
-import remarkParse from "remark-parse";
-import remarkRehype from "remark-rehype";
-import rehypeStringify from "rehype-stringify";
-import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
-import rehypeShiki from "@shikijs/rehype";
-import { visit, SKIP } from "unist-util-visit";
+import { createHighlighter, bundledLanguagesInfo } from "shiki";
+import sanitizeHtml from "sanitize-html";
 
 /**
  * Resolves a wiki link title and label to a final link target.
@@ -17,204 +12,226 @@ export type ResolveWikiLink = (
   label: string;
 };
 
-/**
- * Matches wiki link syntax like [[Title]] or [[Title|Label]].
- */
 const WIKI_LINK_PATTERN = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-
-/**
- * Text node in a markdown AST.
- */
-type TextNode = {
-  type: "text";
-  value: string;
+const FENCED_CODE_BLOCK_PATTERN = /(```+|~~~+)([^\n]*)\n([\s\S]*?)\1/g;
+const INLINE_CODE_PATTERN = /(`+)([^\n]*?)\1/g;
+const CODE_BLOCK_HTML_PATTERN =
+  /<pre><code(?: class="language-([^"]+)")?>([\s\S]*?)<\/code><\/pre>/g;
+const SHIKI_THEME = "catppuccin-latte";
+const BUN_MARKDOWN_OPTIONS: Bun.markdown.Options = {
+  tables: true,
+  strikethrough: true,
+  tasklists: true,
+  hardSoftBreaks: true,
+  wikiLinks: true,
+  underline: true,
+  latexMath: true,
+  collapseWhitespace: true,
+  permissiveAtxHeaders: true,
+  noIndentedCodeBlocks: false,
+  noHtmlBlocks: false,
+  noHtmlSpans: false,
+  tagFilter: false,
+  autolinks: true,
+  headings: true,
 };
 
-/**
- * Link node in a markdown AST.
- */
-type LinkNode = {
-  type: "link";
-  url: string;
-  title?: string | null;
-  children: TextNode[];
-  data?: {
-    hProperties?: {
-      className?: string;
-    };
-  };
+const SUPPORTED_LANGUAGES = new Set(
+  bundledLanguagesInfo.flatMap((language) => [language.id, ...(language.aliases ?? [])]),
+);
+
+const highlighterPromise = createHighlighter({
+  themes: [SHIKI_THEME],
+  langs: [...SUPPORTED_LANGUAGES],
+});
+
+const escapeHtml = (value: string): string =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const escapeHtmlAttribute = (value: string): string =>
+  escapeHtml(value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+const sanitizeHref = (href: string | null): string => {
+  if (!href) {
+    return "#";
+  }
+  const trimmed = href.trim();
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) {
+    return "#";
+  }
+  return trimmed;
 };
 
-/**
- * Root node for a markdown AST fragment.
- */
-type RootNode = {
-  type: "root";
-  children: Array<TextNode | LinkNode>;
-};
-
-/**
- * Builds a link node for a resolved wiki link.
- */
-const buildWikiLinkNode = (title: string, label: string, href: string | null): LinkNode => {
-  const className = href
+const buildWikiLinkClassName = (href: string | null): string =>
+  href
     ? "wiki-link text-blue-600 underline decoration-blue-300 underline-offset-4"
     : "wiki-link unresolved text-slate-400 underline decoration-dotted underline-offset-4";
-  return {
-    type: "link",
-    url: href ?? "#",
-    title,
-    children: [{ type: "text", value: label }],
-    data: {
-      hProperties: {
-        className,
-      },
-    },
-  };
+
+const buildWikiLinkHtml = (title: string, label: string, href: string | null): string => {
+  const safeHref = sanitizeHref(href);
+  return `<a href="${escapeHtmlAttribute(safeHref)}" title="${escapeHtmlAttribute(title)}" class="${buildWikiLinkClassName(href)}">${escapeHtml(label)}</a>`;
 };
 
-/**
- * Splits text into plain text and wiki link nodes.
- */
-const splitTextWithWikiLinks = (
-  value: string,
-  resolveWikiLink: ResolveWikiLink,
-): Array<TextNode | LinkNode> => {
-  const nodes: Array<TextNode | LinkNode> = [];
+const maskCodeSpans = (content: string): string => {
+  const maskedFenced = content.replace(FENCED_CODE_BLOCK_PATTERN, (match: string): string =>
+    " ".repeat(match.length),
+  );
+  return maskedFenced.replace(INLINE_CODE_PATTERN, (match: string): string =>
+    " ".repeat(match.length),
+  );
+};
+
+const replaceWikiLinksWithHtml = (content: string, resolveWikiLink: ResolveWikiLink): string => {
+  const maskedContent = maskCodeSpans(content);
+  let result = "";
   let lastIndex = 0;
 
   WIKI_LINK_PATTERN.lastIndex = 0;
-
-  for (const match of value.matchAll(WIKI_LINK_PATTERN)) {
+  for (const match of maskedContent.matchAll(WIKI_LINK_PATTERN)) {
     const matchIndex = match.index ?? 0;
-    if (matchIndex > lastIndex) {
-      nodes.push({ type: "text", value: value.slice(lastIndex, matchIndex) });
+    const fullMatch = match[0];
+    if (!fullMatch) {
+      continue;
     }
+
+    result += content.slice(lastIndex, matchIndex);
 
     const title = match[1]?.trim();
     if (!title) {
-      lastIndex = matchIndex + match[0].length;
+      result += fullMatch;
+      lastIndex = matchIndex + fullMatch.length;
       continue;
     }
 
     const label = match[2]?.trim() || title;
     const resolved = resolveWikiLink(title, label);
-    nodes.push(buildWikiLinkNode(title, resolved.label, resolved.href));
-
-    lastIndex = matchIndex + match[0].length;
+    result += buildWikiLinkHtml(title, resolved.label, resolved.href);
+    lastIndex = matchIndex + fullMatch.length;
   }
 
-  if (lastIndex < value.length) {
-    nodes.push({ type: "text", value: value.slice(lastIndex) });
+  result += content.slice(lastIndex);
+  return result;
+};
+
+const sanitizeRenderedHtml = (html: string): string =>
+  sanitizeHtml(html, {
+    allowedTags: [
+      "a",
+      "b",
+      "blockquote",
+      "br",
+      "code",
+      "del",
+      "div",
+      "em",
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+      "hr",
+      "i",
+      "kbd",
+      "li",
+      "ol",
+      "p",
+      "pre",
+      "s",
+      "span",
+      "strong",
+      "sub",
+      "sup",
+      "table",
+      "tbody",
+      "td",
+      "th",
+      "thead",
+      "tr",
+      "u",
+      "ul",
+    ],
+    allowedAttributes: {
+      a: ["href", "title", "class"],
+      code: ["class"],
+      pre: ["class", "tabindex", "style"],
+      span: ["class", "style"],
+      th: ["align"],
+      td: ["align"],
+    },
+    allowedClasses: {
+      a: ["wiki-link", "unresolved", "line"],
+      pre: ["shiki", "github-light", "catppuccin-latte"],
+      code: ["language-*"],
+      span: ["line"],
+    },
+    allowedSchemes: ["http", "https", "mailto", "tel"],
+    allowProtocolRelative: false,
+    disallowedTagsMode: "discard",
+    parser: {
+      lowerCaseAttributeNames: true,
+    },
+  });
+
+const decodeHtml = (value: string): string =>
+  value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+
+const normalizeLanguage = (language: string | undefined): string => {
+  if (!language) {
+    return "text";
   }
-
-  return nodes;
-};
-
-/**
- * Narrow unknown values to plain objects.
- */
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-/**
- * Checks if a node is a text node.
- */
-const isTextNode = (node: unknown): node is TextNode => {
-  if (!isRecord(node)) {
-    return false;
+  const normalized = language.toLowerCase();
+  if (normalized === "text") {
+    return "text";
   }
-  return node["type"] === "text" && typeof node["value"] === "string";
+  return SUPPORTED_LANGUAGES.has(normalized) ? normalized : "text";
 };
 
-/**
- * Checks if a node has children.
- */
-const hasChildren = (node: unknown): node is RootNode => {
-  if (!isRecord(node)) {
-    return false;
+const highlightCodeBlocks = async (html: string): Promise<string> => {
+  try {
+    const highlighter = await highlighterPromise;
+    const replacements = [...html.matchAll(CODE_BLOCK_HTML_PATTERN)];
+    if (replacements.length === 0) {
+      return html;
+    }
+
+    let output = html;
+    for (const block of replacements) {
+      const whole = block[0];
+      const language = normalizeLanguage(block[1]);
+      const code = decodeHtml(block[2] ?? "");
+      const highlighted = highlighter.codeToHtml(code, {
+        lang: language,
+        theme: SHIKI_THEME,
+      });
+      output = output.replace(whole, highlighted);
+    }
+    return output;
+  } catch {
+    return html;
   }
-  return Array.isArray(node["children"]);
 };
 
-/**
- * Remark plugin that replaces wiki link text with link nodes.
- */
-const remarkWikiLink = (options: { resolveWikiLink: ResolveWikiLink }) => {
-  return (tree: RootNode) => {
-    visit(tree, "text", (node, index, parent) => {
-      if (!isTextNode(node) || !hasChildren(parent) || typeof index !== "number") {
-        return;
-      }
-
-      WIKI_LINK_PATTERN.lastIndex = 0;
-      if (!WIKI_LINK_PATTERN.test(node.value)) {
-        return;
-      }
-
-      const replacement = splitTextWithWikiLinks(node.value, options.resolveWikiLink);
-      if (replacement.length === 0) {
-        return;
-      }
-
-      parent.children.splice(index, 1, ...replacement);
-      return [SKIP, index + replacement.length];
-    });
-  };
-};
-
-/**
- * Sanitization schema for rendered markdown.
- */
-const SANITIZED_SCHEMA: SanitizeSchema = {
-  ...defaultSchema,
-  attributes: {
-    ...defaultSchema.attributes,
-    "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
-    pre: [...(defaultSchema.attributes?.["pre"] ?? []), "style"],
-    code: [...(defaultSchema.attributes?.["code"] ?? []), "style"],
-    span: [...(defaultSchema.attributes?.["span"] ?? []), "style"],
-    ["a"]: [...(defaultSchema.attributes?.["a"] ?? []), ["className", /^[\w\s-:]+$/]],
-  },
-};
-
-/**
- * Render markdown to HTML with wiki links.
- */
 export const renderMarkdown = async (
   content: string,
   resolveWikiLink: ResolveWikiLink,
 ): Promise<string> => {
-  const file = await unified()
-    .use(remarkParse)
-    .use(remarkWikiLink, { resolveWikiLink })
-    .use(remarkRehype)
-    .use(rehypeShiki, {
-      theme: "github-light",
-      langs: [
-        "bash",
-        "css",
-        "html",
-        "js",
-        "java",
-        "javascript",
-        "json",
-        "jsonc",
-        "markdown",
-        "md",
-        "sql",
-        "sh",
-        "ts",
-        "tsx",
-        "jsx",
-        "typescript",
-        "yaml",
-        "yml",
-      ],
-    })
-    .use(rehypeSanitize, SANITIZED_SCHEMA)
-    .use(rehypeStringify)
-    .process(content);
-
-  return String(file);
+  const source = replaceWikiLinksWithHtml(content, resolveWikiLink);
+  const renderToHtml = (
+    globalThis as {
+      Bun?: { markdown?: { html?: (value: string, options?: Bun.markdown.Options) => string } };
+    }
+  ).Bun?.markdown?.html;
+  if (!renderToHtml) {
+    throw new Error("Bun.markdown.html is not available");
+  }
+  const html = renderToHtml(source, BUN_MARKDOWN_OPTIONS);
+  const safeHtml = sanitizeRenderedHtml(html);
+  const highlighted = await highlightCodeBlocks(safeHtml);
+  return highlighted;
 };

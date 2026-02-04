@@ -16,7 +16,7 @@ describe("fetchJson", () => {
     });
 
     const fetchMock = vi.fn().mockResolvedValue(response);
-    globalThis.fetch = fetchMock;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     const result = await fetchJson("/hello", schema);
 
@@ -29,7 +29,7 @@ describe("fetchJson", () => {
     const response = new Response("not found", { status: 404 });
 
     const fetchMock = vi.fn().mockResolvedValue(response);
-    globalThis.fetch = fetchMock;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     await expect(fetchJson("/missing", schema)).rejects.toThrow("404");
   });
