@@ -1,32 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+:root {
+  --background: #fdfaf5;
+  --foreground: #0f172a;
+  --border: #dbe3ef;
+}
 
-@layer base {
-  :root {
-    --background: 38 40% 97%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --primary: 207 84% 41%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 24 58% 95%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 95%;
-    --muted-foreground: 215 16% 40%;
-    --accent: 42 92% 92%;
-    --accent-foreground: 222 47% 11%;
-    --border: 214 32% 88%;
-    --input: 214 32% 88%;
-    --ring: 207 84% 41%;
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
 
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-    font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-  }
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
 }

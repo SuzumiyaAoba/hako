@@ -14,29 +14,41 @@ const STYLE_TEXT = `
 :root{color-scheme:light;font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif}
 body{margin:0;color:#0f172a;background:#f3f2ea}
 header{max-width:860px;margin:0 auto;padding:18px 20px 0}
-:root{--note-line-step:32px;--note-rule-offset:23px;--note-padding-top:16px}
+:root{--note-line-step:32px;--note-rule-offset:24px;--note-padding-top:16px}
 main{position:relative;max-width:860px;margin:0 auto;padding:var(--note-padding-top) 20px 48px;border:1px solid #d9d7cc;background-color:#fffef8;background-image:linear-gradient(to bottom,transparent calc(var(--note-rule-offset) - 1px),#d6e3ff calc(var(--note-rule-offset) - 1px) var(--note-rule-offset),transparent var(--note-rule-offset));background-size:100% var(--note-line-step);background-position:0 var(--note-padding-top);background-repeat:repeat-y;line-height:var(--note-line-step)}
 main::before{content:"";position:absolute;top:0;bottom:0;left:72px;width:1px;background:#f3a5a5}
 a{color:#2563eb}pre{overflow-x:auto;border-radius:0}
-.muted{color:#64748b}.stack{display:grid;gap:10px}
-.site-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0 14px;border-bottom:1px solid #dbe3ef}
-.site-brand{display:flex;align-items:center;gap:10px;color:#0f172a;text-decoration:none}
+.muted{color:#64748b}
+.stack{display:grid;gap:var(--note-line-step)}
+.stack>li{margin:0}
+.page-grid{display:grid;gap:var(--note-line-step)}
+.page-grid>*{margin:0}
+.site-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px;padding:10px 0 14px;border-bottom:1px solid #dbe3ef}
+.site-brand{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:10px;color:#0f172a;text-decoration:none}
 .site-logo{display:inline-grid;place-items:center;width:28px;height:28px;border:1px solid #334155;background:#fff;font-weight:700;font-size:.8rem}
 .site-title{margin:0;font-size:1rem;font-weight:700;color:#0f172a}
-.site-nav{display:flex;align-items:center;gap:8px}
+.site-nav{display:grid;grid-auto-flow:column;column-gap:8px;align-items:center}
 .site-nav-link{display:inline-block;padding:4px 8px;border:1px solid #dbe3ef;color:#334155;text-decoration:none;font-size:.84rem}
 .site-nav-link[aria-current="page"]{background:#0f172a;color:#fff;border-color:#0f172a}
 .panel{border:1px solid #e2e8f0;background:#fff;border-radius:0;padding:14px}
+.notes-page{display:grid;gap:var(--note-line-step)}
+.notes-page>*{margin:0}
+.notes-page h1{font-size:1rem;line-height:var(--note-line-step)}
+.notes-search{display:grid;grid-template-columns:80px minmax(0,480px);align-items:center;gap:0 12px}
+.notes-search input{box-sizing:border-box;width:100%;max-width:480px;height:var(--note-line-step);padding:0 10px;border:1px solid #cbd5e1;background:#fff;font:inherit;line-height:1}
+.notes-list{list-style:none;margin:10px 0 0;padding:0}
+.notes-list li{margin:0}
+.notes-list a{display:block;line-height:var(--note-line-step);text-decoration:none}
 .frontmatter-card{border:1px solid #dbe3ef;background:#fff;border-radius:0;padding:14px;margin:16px 0;box-shadow:0 1px 2px rgba(15,23,42,.04)}
 .frontmatter-card:not([open]){padding-bottom:14px}
-.frontmatter-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.frontmatter-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;margin-bottom:10px}
 .frontmatter-card:not([open]) .frontmatter-head{margin-bottom:0}
 .frontmatter-title{margin:0;font-size:.95rem;font-weight:700;color:#0f172a}
 .frontmatter-count{font-size:.75rem;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:0;padding:2px 8px}
 .frontmatter-grid{display:grid;gap:8px}.frontmatter-row{display:grid;grid-template-columns:minmax(110px,160px) 1fr;gap:10px;padding:6px 0}
 .frontmatter-key{margin:0;color:#334155;font-size:.78rem;font-weight:700;text-transform:uppercase}
 .frontmatter-value{margin:0;color:#0f172a;font-size:.92rem;line-height:1.55}
-.frontmatter-pill-list{display:flex;flex-wrap:wrap;gap:6px}.frontmatter-pill{display:inline-block;color:#334155;background:#eef2ff;border:1px solid #dbeafe;border-radius:0;padding:2px 9px;font-size:.78rem}
+.frontmatter-pill-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,max-content));gap:6px}.frontmatter-pill{display:inline-block;color:#334155;background:#eef2ff;border:1px solid #dbeafe;border-radius:0;padding:2px 9px;font-size:.78rem}
 .frontmatter-raw{margin:0;padding:10px;border:1px solid #e2e8f0;border-radius:0;background:#f8fafc;color:#334155;font-size:.84rem}
 .frontmatter-toggle{cursor:pointer;list-style:none}
 .frontmatter-toggle::-webkit-details-marker{display:none}
@@ -51,6 +63,16 @@ details[open] .frontmatter-toggle::before{content:"-"}
 .markdown-content pre{padding:12px}.markdown-content pre code{background:transparent;padding:0;border-radius:0}.markdown-content table{width:100%;border-collapse:collapse;margin:1em 0}
 .markdown-content th,.markdown-content td{border:1px solid #e2e8f0;padding:.45em .6em;text-align:left}
 .markdown-content a{text-decoration:none}.markdown-content a.wiki-link{color:#2563eb}.markdown-content a.wiki-link.unresolved{color:#94a3b8}
+.graph-panel{display:grid;grid-template-columns:1fr 1fr;gap:var(--note-line-step)}
+.graph-section{display:grid;gap:var(--note-line-step)}
+.graph-section h2{margin:0}
+@media (max-width:840px){
+  .site-header{grid-template-columns:1fr}
+  .site-nav{grid-auto-flow:row;grid-template-columns:1fr 1fr 1fr}
+  .notes-search{grid-template-columns:1fr}
+  .notes-search label{margin-bottom:0}
+  .graph-panel{grid-template-columns:1fr}
+}
 `;
 
 const escapeHtml = (value: string): string =>
@@ -244,7 +266,7 @@ app.get("/", (c) =>
     renderPage(
       "Hako Web",
       c.req.path,
-      <>
+      <section className="page-grid">
         <h1>Hako Web</h1>
         <p className="muted">Hono + Bun + React SSR 版</p>
         <p>
@@ -253,7 +275,7 @@ app.get("/", (c) =>
         <p>
           <a href="/graph">グラフを見る</a>
         </p>
-      </>,
+      </section>,
     ),
   ),
 );
@@ -267,11 +289,10 @@ app.get("/notes", async (c) => {
     renderPage(
       "ノート一覧",
       c.req.path,
-      <>
+      <section className="notes-page">
         <h1>ノート一覧</h1>
-        <form style={{ marginBottom: "12px" }}>
+        <form className="notes-search">
           <label htmlFor="notes-search">検索</label>
-          <br />
           <input
             id="notes-search"
             type="search"
@@ -286,7 +307,7 @@ app.get("/notes", async (c) => {
         {filtered.length === 0 ? (
           <p>ノートがありません。</p>
         ) : (
-          <ul className="stack">
+          <ul className="notes-list">
             {filtered.map((note) => (
               <li key={note.id}>
                 <a href={`/notes/${encodeURIComponent(note.id)}`}>{note.title}</a>
@@ -297,7 +318,7 @@ app.get("/notes", async (c) => {
         <p>
           <a href="/graph">グラフを見る</a>
         </p>
-      </>,
+      </section>,
     ),
   );
 });
@@ -337,7 +358,7 @@ app.get("/notes/:id", async (c) => {
     renderPage(
       note.title,
       c.req.path,
-      <>
+      <section className="page-grid">
         <p>
           <a href="/notes">← 一覧へ戻る</a>
         </p>
@@ -370,7 +391,7 @@ app.get("/notes/:id", async (c) => {
             </ul>
           )}
         </section>
-      </>,
+      </section>,
     ),
   );
 });
@@ -382,7 +403,7 @@ app.get("/graph", async (c) => {
     renderPage(
       "ノートグラフ",
       c.req.path,
-      <>
+      <section className="page-grid">
         <p>
           <a href="/notes">← 一覧へ戻る</a>
         </p>
@@ -390,24 +411,28 @@ app.get("/graph", async (c) => {
         {graph.nodes.length === 0 ? (
           <p>ノートがありません。</p>
         ) : (
-          <div className="panel">
-            <h2>Nodes</h2>
-            <ul className="stack">
-              {graph.nodes.map((node) => (
-                <li key={node.id}>{node.title}</li>
-              ))}
-            </ul>
-            <h2>Links</h2>
-            <ul className="stack">
-              {graph.links.map((link, index) => (
-                <li key={`${link.source}-${link.target}-${index}`}>
-                  {escapeHtml(link.source)} → {escapeHtml(link.target)}
-                </li>
-              ))}
-            </ul>
+          <div className="panel graph-panel">
+            <section className="graph-section">
+              <h2>Nodes</h2>
+              <ul className="stack">
+                {graph.nodes.map((node) => (
+                  <li key={node.id}>{node.title}</li>
+                ))}
+              </ul>
+            </section>
+            <section className="graph-section">
+              <h2>Links</h2>
+              <ul className="stack">
+                {graph.links.map((link, index) => (
+                  <li key={`${link.source}-${link.target}-${index}`}>
+                    {escapeHtml(link.source)} → {escapeHtml(link.target)}
+                  </li>
+                ))}
+              </ul>
+            </section>
           </div>
         )}
-      </>,
+      </section>,
     ),
   );
 });
