@@ -93,7 +93,7 @@ describe("renderMarkdown", () => {
     expect(html).not.toContain("javascript:");
   });
 
-  it("renders code blocks with shiki highlighting", async () => {
+  it("renders code blocks with themed pre style", async () => {
     const html = await renderMarkdown("```ts\nconst value = 1\n```", (_title, label) => ({
       href: null,
       label,

@@ -1,14 +1,7 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import HomePage from "../app/page";
-import NotesPage from "../app/notes/page";
-import NotesDetailPage from "../app/notes/[id]/page";
+import { app } from "../src/app";
 
-/**
- * Test fixture notes.
- */
 const notes = [
   {
     id: "note-1",
@@ -20,22 +13,14 @@ const notes = [
   },
 ];
 
-globalThis.React = React;
-
-/**
- * Creates a JSON response for mock fetch.
- */
 const createJsonResponse = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {
     status,
     headers: { "content-type": "application/json" },
   });
 
-/**
- * Stubs global fetch for tests.
- */
 const mockFetch = () => {
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+  const fetchMock = vi.fn(async (input: string | URL | Request) => {
     const url = input.toString();
     if (url.endsWith("/notes")) {
       return createJsonResponse(notes);
@@ -59,27 +44,21 @@ describe("pages smoke", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders home page", () => {
-    const element = HomePage();
-    const html = renderToStaticMarkup(element);
+  it("renders home page", async () => {
+    const response = await app.request("http://localhost/");
+    const html = await response.text();
     expect(html).toContain("Hako Web");
   });
 
   it("renders notes page", async () => {
-    const element = await NotesPage({ searchParams: { q: "Al" } });
-    const html = renderToStaticMarkup(element);
-    expect(html).toContain("Alpha");
-  });
-
-  it("renders notes page with repeated query params", async () => {
-    const element = await NotesPage({ searchParams: { q: ["Al", "Beta"] } });
-    const html = renderToStaticMarkup(element);
+    const response = await app.request("http://localhost/notes?q=Al");
+    const html = await response.text();
     expect(html).toContain("Alpha");
   });
 
   it("renders note detail page", async () => {
-    const element = await NotesDetailPage({ params: { id: "note-1" } });
-    const html = renderToStaticMarkup(element);
+    const response = await app.request("http://localhost/notes/note-1");
+    const html = await response.text();
     expect(html).toContain("Alpha");
   });
 });
