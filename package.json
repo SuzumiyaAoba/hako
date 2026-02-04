@@ -8,6 +8,8 @@
     "prepare": "husky install",
     "dev": "bun run --workspaces --if-present --parallel dev",
     "build": "bun run --workspaces --if-present --parallel build",
+    "storybook": "bun run --filter @hako/web storybook",
+    "build-storybook": "bun run --filter @hako/web build-storybook",
     "notes": "tsx scripts/notes.ts",
     "lint": "oxlint .",
     "format": "oxfmt .",

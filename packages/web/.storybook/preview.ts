@@ -1,4 +1,5 @@
 import type { Preview } from "@storybook/react";
+import "../src/styles/globals.css";
 
 const preview: Preview = {
   parameters: {
@@ -8,7 +9,14 @@ const preview: Preview = {
         date: /Date$/i,
       },
     },
-    layout: "centered",
+    layout: "fullscreen",
+    backgrounds: {
+      default: "canvas",
+      values: [
+        { name: "canvas", value: "#f7f3ed" },
+        { name: "paper", value: "#ffffff" },
+      ],
+    },
   },
 };
 
