@@ -168,7 +168,7 @@ const main = async (): Promise<void> => {
 
   if (command === "import") {
     if (!targetDir) {
-      console.error("Usage: npm run notes -- import <dir>");
+      console.error("Usage: bun run notes -- import <dir>");
       process.exit(1);
     }
 
@@ -185,7 +185,7 @@ const main = async (): Promise<void> => {
     return;
   }
 
-  console.error("Usage: npm run notes -- <import|reindex> [dir]");
+  console.error("Usage: bun run notes -- <import|reindex> [dir]");
   process.exit(1);
 };
 
