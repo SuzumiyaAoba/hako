@@ -12,9 +12,10 @@ import { renderMarkdown } from "./shared/lib/markdown";
 
 const STYLE_TEXT = `
 :root{color-scheme:light;font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif}
-body{margin:0;color:#0f172a;background:linear-gradient(180deg,#f8fafc 0%,#fff 320px)}
+body{margin:0;color:#0f172a;background:#f3f2ea}
 header{max-width:860px;margin:0 auto;padding:18px 20px 0}
-main{max-width:860px;margin:0 auto;padding:24px 20px 48px}
+main{position:relative;max-width:860px;margin:0 auto;padding:24px 20px 48px;border:1px solid #d9d7cc;background-color:#fffef8;background-image:repeating-linear-gradient(to bottom,transparent 0 31px,#d6e3ff 31px 32px)}
+main::before{content:"";position:absolute;top:0;bottom:0;left:72px;width:1px;background:#f3a5a5}
 a{color:#2563eb}pre{overflow-x:auto;border-radius:0}
 .muted{color:#64748b}.stack{display:grid;gap:10px}
 .site-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0 14px;border-bottom:1px solid #dbe3ef}
