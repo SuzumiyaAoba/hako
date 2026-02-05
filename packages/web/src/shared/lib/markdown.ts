@@ -173,6 +173,9 @@ const sanitizeRenderedHtml = (html: string): string =>
     },
   });
 
+const stripUnsafeProtocols = (html: string): string =>
+  html.replace(/(?:javascript|data|vbscript):/gi, "");
+
 const decodeHtml = (value: string): string =>
   value
     .replace(/&lt;/g, "<")
@@ -231,7 +234,7 @@ export const renderMarkdown = async (
     throw new Error("Bun.markdown.html is not available");
   }
   const html = renderToHtml(source, BUN_MARKDOWN_OPTIONS);
-  const safeHtml = sanitizeRenderedHtml(html);
+  const safeHtml = stripUnsafeProtocols(sanitizeRenderedHtml(html));
   const highlighted = await highlightCodeBlocks(safeHtml);
   return highlighted;
 };

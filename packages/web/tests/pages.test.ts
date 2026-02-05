@@ -19,6 +19,8 @@ const createJsonResponse = (body: unknown, status = 200): Response =>
     headers: { "content-type": "application/json" },
   });
 
+let originalFetch: typeof fetch | undefined;
+
 const mockFetch = () => {
   const fetchMock = vi.fn(async (input: string | URL | Request) => {
     const url = input.toString();
@@ -31,7 +33,8 @@ const mockFetch = () => {
     return new Response("not found", { status: 404 });
   });
 
-  vi.stubGlobal("fetch", fetchMock);
+  originalFetch = globalThis.fetch;
+  globalThis.fetch = fetchMock as typeof fetch;
 };
 
 describe("pages smoke", () => {
@@ -40,14 +43,16 @@ describe("pages smoke", () => {
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    if (originalFetch) {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it("renders home page", async () => {
     const response = await app.request("http://localhost/");
-    const html = await response.text();
-    expect(html).toContain("Hako Web");
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/notes");
   });
 
   it("renders notes page", async () => {
