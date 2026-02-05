@@ -172,7 +172,7 @@ const sanitizeRenderedHtml = (html: string): string =>
         tagName,
         attribs: {
           ...attribs,
-          class: attribs.class ? `${attribs.class} markdown-table` : "markdown-table",
+          class: attribs["class"] ? `${attribs["class"]} markdown-table` : "markdown-table",
         },
       }),
     },

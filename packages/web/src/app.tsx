@@ -159,7 +159,7 @@ const Header = ({
   searchQuery,
 }: {
   pathname: string;
-  searchQuery?: string;
+  searchQuery: string;
 }): JSX.Element => (
   <header className="px-4 pb-2 pt-5 sm:px-6 lg:px-14">
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -267,40 +267,43 @@ const HtmlPage = ({
   sidebarNotes?: ReadonlyArray<Pick<Note, "id" | "title">>;
   searchQuery?: string;
   children: React.ReactNode;
-}): JSX.Element => (
-  <html lang="ja">
-    <head>
-      <meta charSet="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <title>{title}</title>
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap"
-        rel="stylesheet"
-      />
-      <link rel="stylesheet" href="/styles.css" />
-    </head>
-    <body className="bg-slate-100 text-slate-900 antialiased">
-      <Header pathname={pathname} searchQuery={searchQuery} />
-      <div
-        className={cn(
-          "px-4 pb-12 sm:px-6 lg:px-14",
-          sidebarNotes ? "lg:flex lg:items-start lg:gap-6" : "",
-        )}
-      >
-        {sidebarNotes ? (
-          <div className="mt-10 lg:mt-10 lg:w-72 lg:shrink-0">
-            <SideMenu notes={sidebarNotes} pathname={pathname} />
-          </div>
-        ) : null}
-        <main className="mt-10 w-full min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-8">
-          {children}
-        </main>
-      </div>
-    </body>
-  </html>
-);
+}): JSX.Element => {
+  const resolvedSearchQuery = searchQuery ?? "";
+  return (
+    <html lang="ja">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{title}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap"
+          rel="stylesheet"
+        />
+        <link rel="stylesheet" href="/styles.css" />
+      </head>
+      <body className="bg-slate-100 text-slate-900 antialiased">
+        <Header pathname={pathname} searchQuery={resolvedSearchQuery} />
+        <div
+          className={cn(
+            "px-4 pb-12 sm:px-6 lg:px-14",
+            sidebarNotes ? "lg:flex lg:items-start lg:gap-6" : "",
+          )}
+        >
+          {sidebarNotes ? (
+            <div className="mt-10 lg:mt-10 lg:w-72 lg:shrink-0">
+              <SideMenu notes={sidebarNotes} pathname={pathname} />
+            </div>
+          ) : null}
+          <main className="mt-10 w-full min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-8">
+            {children}
+          </main>
+        </div>
+      </body>
+    </html>
+  );
+};
 
 const renderPage = (
   title: string,
@@ -314,7 +317,7 @@ const renderPage = (
       title={title}
       pathname={pathname}
       {...(sidebarNotes ? { sidebarNotes } : {})}
-      {...(searchQuery !== undefined ? { searchQuery } : {})}
+      searchQuery={searchQuery ?? ""}
     >
       {content}
     </HtmlPage>,
