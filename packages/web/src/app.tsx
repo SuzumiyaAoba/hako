@@ -86,7 +86,7 @@ const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.E
       <details className="border border-slate-200 bg-white p-4">
         <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-900">
           <span>Frontmatter</span>
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
+          <span className="border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
             raw
           </span>
         </summary>
@@ -100,7 +100,7 @@ const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.E
     <details className="border border-slate-200 bg-white p-4">
       <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-900">
         <span>Frontmatter</span>
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
+        <span className="border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
           {entries.length} fields
         </span>
       </summary>
@@ -141,7 +141,7 @@ const MetadataCard = ({ path }: { path: string }): JSX.Element => (
   <details className="border border-slate-200 bg-white p-4">
     <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-900">
       <span>Metadata</span>
-      <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
+      <span className="border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
         1 field
       </span>
     </summary>
