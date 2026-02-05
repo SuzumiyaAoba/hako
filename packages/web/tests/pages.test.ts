@@ -34,7 +34,7 @@ const mockFetch = () => {
   });
 
   originalFetch = globalThis.fetch;
-  globalThis.fetch = fetchMock as typeof fetch;
+  globalThis.fetch = fetchMock as unknown as typeof fetch;
 };
 
 describe("pages smoke", () => {
