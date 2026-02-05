@@ -1,6 +1,8 @@
 import { serve } from "bun";
 import { app } from "./app";
 
+const isDev = process.env["NODE_ENV"] !== "production";
+
 const resolvePort = (): number => {
   const raw = process.env["PORT"]?.trim();
   if (!raw) {
@@ -16,6 +18,20 @@ const resolvePort = (): number => {
 };
 
 const port = resolvePort();
+
+if (isDev) {
+  const webRoot = new URL("..", import.meta.url).pathname;
+  const tailwindCli = new URL("../node_modules/.bin/tailwindcss", import.meta.url).pathname;
+
+  Bun.spawn(
+    [tailwindCli, "-i", "src/styles/globals.css", "-o", "src/styles/tailwind.css", "--watch"],
+    {
+      cwd: webRoot,
+      stdout: "ignore",
+      stderr: "inherit",
+    },
+  );
+}
 
 serve({
   port,
