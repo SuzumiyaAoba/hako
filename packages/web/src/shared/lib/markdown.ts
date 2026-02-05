@@ -156,6 +156,7 @@ const sanitizeRenderedHtml = (html: string): string =>
       code: ["class"],
       pre: ["class", "tabindex", "style"],
       span: ["class", "style"],
+      table: ["class"],
       th: ["align"],
       td: ["align"],
     },
@@ -164,6 +165,16 @@ const sanitizeRenderedHtml = (html: string): string =>
       pre: ["shiki", "github-light"],
       code: ["language-*"],
       span: ["line"],
+      table: ["markdown-table"],
+    },
+    transformTags: {
+      table: (tagName, attribs) => ({
+        tagName,
+        attribs: {
+          ...attribs,
+          class: attribs["class"] ? `${attribs["class"]} markdown-table` : "markdown-table",
+        },
+      }),
     },
     allowedSchemes: ["http", "https", "mailto", "tel"],
     allowProtocolRelative: false,
