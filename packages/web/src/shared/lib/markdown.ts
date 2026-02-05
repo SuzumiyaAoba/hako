@@ -31,8 +31,8 @@ const highlighterPromise = createHighlighter({
   langs: [...SUPPORTED_LANGUAGES],
 });
 
-const normalizeCodeLanguages: any = () => (tree: unknown) => {
-  visit(tree as { children?: unknown[] }, "code", (node: { lang?: string }) => {
+const normalizeCodeLanguages = () => (tree: any) => {
+  visit(tree as any, "code", (node: { lang?: string }) => {
     const lang = node.lang?.toLowerCase();
     if (!lang || !SUPPORTED_LANGUAGES.has(lang)) {
       node.lang = "text";
@@ -40,13 +40,13 @@ const normalizeCodeLanguages: any = () => (tree: unknown) => {
   });
 };
 
-const highlightCodeBlocks: any = () => async (tree: unknown) => {
+const highlightCodeBlocks = () => async (tree: any) => {
   const targets: Array<{ node: { lang?: string; value?: string }; index: number; parent: any }> =
     [];
   visit(
-    tree as { children?: unknown[] },
+    tree as any,
     "code",
-    (node: { lang?: string; value?: string }, index: number | null, parent: any) => {
+    (node: { lang?: string; value?: string }, index: number | undefined, parent: any) => {
       if (!parent || typeof index !== "number") {
         return;
       }
