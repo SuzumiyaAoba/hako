@@ -17,7 +17,7 @@
 
 @layer components {
   .markdown-content {
-    @apply text-sm text-slate-900;
+    @apply max-w-full overflow-x-hidden text-sm text-slate-900;
   }
 
   .markdown-content > :first-child {
@@ -73,15 +73,31 @@
   }
 
   .markdown-content code {
-    @apply rounded bg-slate-100 px-1.5 py-0.5 font-mono text-sm text-rose-600;
+    @apply inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 font-mono text-sm leading-[1] text-rose-600;
   }
 
   .markdown-content pre {
-    @apply my-4 overflow-x-auto border border-slate-200 bg-slate-50 p-4 text-slate-900;
+    @apply my-3 block w-full max-w-full overflow-x-auto whitespace-pre border border-slate-200 bg-slate-50 px-4 pt-4 text-slate-900;
   }
 
   .markdown-content pre code {
-    @apply bg-transparent p-0 text-xs text-slate-900;
+    @apply block bg-transparent px-0 pb-0 pt-0 text-[11px] leading-[0.75] text-slate-900;
+  }
+
+  .markdown-content .shiki {
+    @apply max-w-full overflow-x-auto;
+  }
+
+  .markdown-content pre.shiki {
+    padding: 16px 16px 8px !important;
+  }
+
+  .markdown-content .shiki code {
+    @apply block w-full;
+  }
+
+  .markdown-content .line {
+    @apply block w-full;
   }
 
   .markdown-table {

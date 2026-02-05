@@ -148,7 +148,7 @@ const MetadataCard = ({ path }: { path: string }): JSX.Element => (
     <div className="mt-3 grid gap-3">
       <div className="grid gap-2 sm:grid-cols-[140px_minmax(0,1fr)]">
         <p className="text-xs font-semibold uppercase text-slate-500">FILE_PATH</p>
-        <div className="min-w-0 text-sm text-slate-900">{path}</div>
+        <div className="min-w-0 break-all text-sm text-slate-900">{path}</div>
       </div>
     </div>
   </details>
@@ -294,7 +294,7 @@ const HtmlPage = ({
             <SideMenu notes={sidebarNotes} pathname={pathname} />
           </div>
         ) : null}
-        <main className="mt-10 w-full rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-8">
+        <main className="mt-10 w-full min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-8">
           {children}
         </main>
       </div>
@@ -408,6 +408,7 @@ app.get("/notes/:id", async (c) => {
   const backlinks = buildBacklinks(notes, note.title);
   const { frontmatter, body } = extractFrontmatter(note.content ?? "");
   const markdown = body.trim();
+  const rawMode = c.req.query("raw") === "1";
   const rendered = markdown
     ? await renderMarkdown(markdown, (title, label) => {
         const target = titleMap.get(title);
@@ -415,19 +416,35 @@ app.get("/notes/:id", async (c) => {
       })
     : "";
 
+  const rawHref = rawMode ? `/notes/${note.id}` : `/notes/${note.id}?raw=1`;
+
   return c.html(
     renderPage(
       note.title,
       c.req.path,
       <section className="space-y-6 text-pretty">
-        <h1 className="text-balance text-2xl font-semibold text-slate-900">{note.title}</h1>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-balance text-2xl font-semibold text-slate-900">{note.title}</h1>
+          <a
+            className="border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            href={rawHref}
+          >
+            {rawMode ? "Preview" : "Raw"}
+          </a>
+        </div>
         <MetadataCard path={note.path} />
         <FrontmatterCard frontmatter={frontmatter} />
         {rendered ? (
-          <article
-            className="markdown-content border border-slate-200 p-4"
-            dangerouslySetInnerHTML={{ __html: rendered }}
-          />
+          <article className="w-full max-w-full border border-slate-200 p-4">
+            {rawMode ? (
+              <pre className="whitespace-pre-wrap text-xs text-slate-900">{note.content ?? ""}</pre>
+            ) : (
+              <div
+                className="markdown-content w-full max-w-full"
+                dangerouslySetInnerHTML={{ __html: rendered }}
+              />
+            )}
+          </article>
         ) : (
           <p className="text-sm text-slate-500">ノートの内容がまだ読み込まれていません。</p>
         )}
