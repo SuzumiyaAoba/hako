@@ -1,11 +1,12 @@
 import sanitizeHtml from "sanitize-html";
-import { remarkPlugins } from "@prose-ui/core";
+import { createHighlighter, bundledLanguagesInfo } from "shiki";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
+import { visit } from "unist-util-visit";
 
 /**
  * Resolves a wiki link title and label to a final link target.
@@ -21,10 +22,52 @@ export type ResolveWikiLink = (
 const WIKI_LINK_PATTERN = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
 const FENCED_CODE_BLOCK_PATTERN = /(```+|~~~+)([^\n]*)\n([\s\S]*?)\1/g;
 const INLINE_CODE_PATTERN = /(`+)([^\n]*?)\1/g;
+const SUPPORTED_LANGUAGES = new Set(
+  bundledLanguagesInfo.flatMap((language) => [language.id, ...(language.aliases ?? [])]),
+);
+
+const highlighterPromise = createHighlighter({
+  themes: ["github-light"],
+  langs: [...SUPPORTED_LANGUAGES],
+});
+
+const normalizeCodeLanguages: any = () => (tree: unknown) => {
+  visit(tree as { children?: unknown[] }, "code", (node: { lang?: string }) => {
+    const lang = node.lang?.toLowerCase();
+    if (!lang || !SUPPORTED_LANGUAGES.has(lang)) {
+      node.lang = "text";
+    }
+  });
+};
+
+const highlightCodeBlocks: any = () => async (tree: unknown) => {
+  const targets: Array<{ node: { lang?: string; value?: string }; index: number; parent: any }> =
+    [];
+  visit(
+    tree as { children?: unknown[] },
+    "code",
+    (node: { lang?: string; value?: string }, index: number | null, parent: any) => {
+      if (!parent || typeof index !== "number") {
+        return;
+      }
+      targets.push({ node, index, parent });
+    },
+  );
+
+  const highlighter = await highlighterPromise;
+  for (const { node, index, parent } of targets) {
+    const lang = node.lang?.toLowerCase() ?? "text";
+    const code = node.value ?? "";
+    const highlighted = highlighter.codeToHtml(code, { lang, theme: "github-light" });
+    parent.children[index] = { type: "html", value: highlighted };
+  }
+};
+
 const markdownProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm)
-  .use(remarkPlugins())
+  .use(normalizeCodeLanguages)
+  .use(highlightCodeBlocks)
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
   .use(rehypeStringify);

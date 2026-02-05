@@ -17,3 +17,17 @@
     font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
   }
 }
+
+@layer components {
+  .prose-ui pre code {
+    @apply block px-2 py-2 text-sm;
+  }
+
+  .prose-ui pre {
+    @apply bg-slate-50;
+  }
+
+  .prose-ui pre.shiki {
+    background-color: rgb(248 250 252) !important;
+  }
+}

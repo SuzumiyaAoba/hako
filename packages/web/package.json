@@ -29,8 +29,10 @@
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.0",
     "sanitize-html": "^2.13.0",
+    "shiki": "^1.1.2",
     "tailwind-merge": "^2.6.0",
     "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0",
     "valibot": "^1.2.0"
   },
   "devDependencies": {
