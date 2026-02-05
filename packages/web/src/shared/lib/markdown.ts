@@ -17,7 +17,7 @@ const FENCED_CODE_BLOCK_PATTERN = /(```+|~~~+)([^\n]*)\n([\s\S]*?)\1/g;
 const INLINE_CODE_PATTERN = /(`+)([^\n]*?)\1/g;
 const CODE_BLOCK_HTML_PATTERN =
   /<pre><code(?: class="language-([^"]+)")?>([\s\S]*?)<\/code><\/pre>/g;
-const SHIKI_THEME = "catppuccin-latte";
+const SHIKI_THEME = "github-light";
 const BUN_MARKDOWN_OPTIONS: Bun.markdown.Options = {
   tables: true,
   strikethrough: true,
@@ -161,7 +161,7 @@ const sanitizeRenderedHtml = (html: string): string =>
     },
     allowedClasses: {
       a: ["wiki-link", "unresolved", "line"],
-      pre: ["shiki", "github-light", "catppuccin-latte"],
+      pre: ["shiki", "github-light"],
       code: ["language-*"],
       span: ["line"],
     },
@@ -172,6 +172,9 @@ const sanitizeRenderedHtml = (html: string): string =>
       lowerCaseAttributeNames: true,
     },
   });
+
+const stripUnsafeProtocols = (html: string): string =>
+  html.replace(/(?:javascript|data|vbscript):/gi, "");
 
 const decodeHtml = (value: string): string =>
   value
@@ -231,7 +234,7 @@ export const renderMarkdown = async (
     throw new Error("Bun.markdown.html is not available");
   }
   const html = renderToHtml(source, BUN_MARKDOWN_OPTIONS);
-  const safeHtml = sanitizeRenderedHtml(html);
+  const safeHtml = stripUnsafeProtocols(sanitizeRenderedHtml(html));
   const highlighted = await highlightCodeBlocks(safeHtml);
   return highlighted;
 };

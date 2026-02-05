@@ -1,45 +1,15 @@
 import { writeFile, unlink } from "node:fs/promises";
 
 import { describe, expect, it } from "vitest";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
 import { Hono } from "hono";
 
 import * as schema from "../src/db/schema";
+import { createTestDb } from "./helpers/create-test-db";
 import { createNotesRoutes } from "../src/routes/notes";
-
-const createDb = () => {
-  const sqlite = new Database(":memory:");
-  sqlite.exec(`
-    create table notes (
-      id text primary key,
-      title text not null,
-      path text not null unique,
-      content text not null,
-      content_hash text not null,
-      updated_at text not null
-    );
-    create table links (
-      id integer primary key autoincrement,
-      from_note_id text not null,
-      to_note_id text,
-      to_title text not null,
-      to_path text,
-      link_text text,
-      position integer
-    );
-    create table note_link_states (
-      note_id text primary key,
-      content_hash text not null,
-      indexed_at text not null
-    );
-  `);
-  return drizzle(sqlite, { schema });
-};
 
 describe("notes routes", () => {
   it("returns notes from /notes", async () => {
-    const db = createDb();
+    const db = await createTestDb();
     db.insert(schema.notes)
       .values({
         id: "note-1",
@@ -71,7 +41,7 @@ describe("notes routes", () => {
   });
 
   it("returns 404 when note is missing", async () => {
-    const db = createDb();
+    const db = await createTestDb();
     const app = new Hono();
     app.route("/", createNotesRoutes(db));
 
@@ -83,7 +53,7 @@ describe("notes routes", () => {
   });
 
   it("returns note content from filesystem", async () => {
-    const db = createDb();
+    const db = await createTestDb();
     const filePath = "/tmp/hako-note-detail.md";
     await writeFile(filePath, "# Hello\n");
 
@@ -113,7 +83,7 @@ describe("notes routes", () => {
   });
 
   it("returns 404 when note file is missing", async () => {
-    const db = createDb();
+    const db = await createTestDb();
     db.insert(schema.notes)
       .values({
         id: "note-1",
@@ -136,7 +106,7 @@ describe("notes routes", () => {
   });
 
   it("imports note paths without storing content", async () => {
-    const db = createDb();
+    const db = await createTestDb();
     const app = new Hono();
     app.route("/", createNotesRoutes(db));
 
@@ -163,7 +133,7 @@ describe("notes routes", () => {
   });
 
   it("imports note paths using fallback titles", async () => {
-    const db = createDb();
+    const db = await createTestDb();
     const app = new Hono();
     app.route("/", createNotesRoutes(db));
 
@@ -184,7 +154,7 @@ describe("notes routes", () => {
   });
 
   it("skips import when nothing changes", async () => {
-    const db = createDb();
+    const db = await createTestDb();
     const app = new Hono();
     app.route("/", createNotesRoutes(db));
 
@@ -212,7 +182,7 @@ describe("notes routes", () => {
   });
 
   it("updates title on import without overwriting content hash when content exists", async () => {
-    const db = createDb();
+    const db = await createTestDb();
     db.insert(schema.notes)
       .values({
         id: "note-1",
@@ -247,7 +217,7 @@ describe("notes routes", () => {
   });
 
   it("returns 400 for invalid import body", async () => {
-    const db = createDb();
+    const db = await createTestDb();
     const app = new Hono();
     app.route("/", createNotesRoutes(db));
 
@@ -263,7 +233,7 @@ describe("notes routes", () => {
   });
 
   it("reindexes note links and skips unchanged notes", async () => {
-    const db = createDb();
+    const db = await createTestDb();
     db.insert(schema.notes)
       .values([
         {
@@ -320,7 +290,7 @@ describe("notes routes", () => {
   });
 
   it("reindexes only changed notes and keeps unresolved links", async () => {
-    const db = createDb();
+    const db = await createTestDb();
     db.insert(schema.notes)
       .values([
         {
