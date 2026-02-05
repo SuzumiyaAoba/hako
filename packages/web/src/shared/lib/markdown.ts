@@ -1,5 +1,11 @@
-import { createHighlighter, bundledLanguagesInfo } from "shiki";
 import sanitizeHtml from "sanitize-html";
+import { remarkPlugins } from "@prose-ui/core";
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import remarkGfm from "remark-gfm";
+import remarkRehype from "remark-rehype";
+import rehypeRaw from "rehype-raw";
+import rehypeStringify from "rehype-stringify";
 
 /**
  * Resolves a wiki link title and label to a final link target.
@@ -15,35 +21,13 @@ export type ResolveWikiLink = (
 const WIKI_LINK_PATTERN = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
 const FENCED_CODE_BLOCK_PATTERN = /(```+|~~~+)([^\n]*)\n([\s\S]*?)\1/g;
 const INLINE_CODE_PATTERN = /(`+)([^\n]*?)\1/g;
-const CODE_BLOCK_HTML_PATTERN =
-  /<pre><code(?: class="language-([^"]+)")?>([\s\S]*?)<\/code><\/pre>/g;
-const SHIKI_THEME = "github-light";
-const BUN_MARKDOWN_OPTIONS: Bun.markdown.Options = {
-  tables: true,
-  strikethrough: true,
-  tasklists: true,
-  hardSoftBreaks: true,
-  wikiLinks: true,
-  underline: true,
-  latexMath: true,
-  collapseWhitespace: true,
-  permissiveAtxHeaders: true,
-  noIndentedCodeBlocks: false,
-  noHtmlBlocks: false,
-  noHtmlSpans: false,
-  tagFilter: false,
-  autolinks: true,
-  headings: true,
-};
-
-const SUPPORTED_LANGUAGES = new Set(
-  bundledLanguagesInfo.flatMap((language) => [language.id, ...(language.aliases ?? [])]),
-);
-
-const highlighterPromise = createHighlighter({
-  themes: [SHIKI_THEME],
-  langs: [...SUPPORTED_LANGUAGES],
-});
+const markdownProcessor = unified()
+  .use(remarkParse)
+  .use(remarkGfm)
+  .use(remarkPlugins())
+  .use(remarkRehype, { allowDangerousHtml: true })
+  .use(rehypeRaw)
+  .use(rehypeStringify);
 
 const escapeHtml = (value: string): string =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -156,26 +140,16 @@ const sanitizeRenderedHtml = (html: string): string =>
       code: ["class"],
       pre: ["class", "tabindex", "style"],
       span: ["class", "style"],
-      table: ["class"],
       th: ["align"],
       td: ["align"],
     },
     allowedClasses: {
       a: ["wiki-link", "unresolved", "line"],
-      pre: ["shiki", "github-light"],
-      code: ["language-*"],
-      span: ["line"],
-      table: ["markdown-table"],
+      pre: ["*"],
+      code: ["*"],
+      span: ["*"],
     },
-    transformTags: {
-      table: (tagName, attribs) => ({
-        tagName,
-        attribs: {
-          ...attribs,
-          class: attribs["class"] ? `${attribs["class"]} markdown-table` : "markdown-table",
-        },
-      }),
-    },
+    transformTags: {},
     allowedSchemes: ["http", "https", "mailto", "tel"],
     allowProtocolRelative: false,
     disallowedTagsMode: "discard",
@@ -187,65 +161,12 @@ const sanitizeRenderedHtml = (html: string): string =>
 const stripUnsafeProtocols = (html: string): string =>
   html.replace(/(?:javascript|data|vbscript):/gi, "");
 
-const decodeHtml = (value: string): string =>
-  value
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-
-const normalizeLanguage = (language: string | undefined): string => {
-  if (!language) {
-    return "text";
-  }
-  const normalized = language.toLowerCase();
-  if (normalized === "text") {
-    return "text";
-  }
-  return SUPPORTED_LANGUAGES.has(normalized) ? normalized : "text";
-};
-
-const highlightCodeBlocks = async (html: string): Promise<string> => {
-  try {
-    const highlighter = await highlighterPromise;
-    const replacements = [...html.matchAll(CODE_BLOCK_HTML_PATTERN)];
-    if (replacements.length === 0) {
-      return html;
-    }
-
-    let output = html;
-    for (const block of replacements) {
-      const whole = block[0];
-      const language = normalizeLanguage(block[1]);
-      const code = decodeHtml(block[2] ?? "");
-      const highlighted = highlighter.codeToHtml(code, {
-        lang: language,
-        theme: SHIKI_THEME,
-      });
-      output = output.replace(whole, highlighted);
-    }
-    return output;
-  } catch {
-    return html;
-  }
-};
-
 export const renderMarkdown = async (
   content: string,
   resolveWikiLink: ResolveWikiLink,
 ): Promise<string> => {
   const source = replaceWikiLinksWithHtml(content, resolveWikiLink);
-  const renderToHtml = (
-    globalThis as {
-      Bun?: { markdown?: { html?: (value: string, options?: Bun.markdown.Options) => string } };
-    }
-  ).Bun?.markdown?.html;
-  if (!renderToHtml) {
-    throw new Error("Bun.markdown.html is not available");
-  }
-  const html = renderToHtml(source, BUN_MARKDOWN_OPTIONS);
+  const html = String(await markdownProcessor.process(source));
   const safeHtml = stripUnsafeProtocols(sanitizeRenderedHtml(html));
-  const highlighted = await highlightCodeBlocks(safeHtml);
-  return highlighted;
+  return safeHtml;
 };

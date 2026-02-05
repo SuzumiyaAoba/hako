@@ -443,7 +443,7 @@ app.get("/notes/:id", async (c) => {
               <pre className="whitespace-pre-wrap text-xs text-slate-900">{note.content ?? ""}</pre>
             ) : (
               <div
-                className="markdown-content w-full max-w-full"
+                className="prose-ui w-full max-w-full"
                 dangerouslySetInnerHTML={{ __html: rendered }}
               />
             )}
