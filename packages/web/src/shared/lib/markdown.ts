@@ -1,5 +1,7 @@
 import sanitizeHtml from "sanitize-html";
 import { createHighlighter, bundledLanguagesInfo } from "shiki";
+import type { Code, Parent, Root } from "mdast";
+import type { Plugin } from "unified";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
@@ -31,8 +33,8 @@ const highlighterPromise = createHighlighter({
   langs: [...SUPPORTED_LANGUAGES],
 });
 
-const normalizeCodeLanguages = () => (tree: any) => {
-  visit(tree as any, "code", (node: { lang?: string }) => {
+const normalizeCodeLanguages: Plugin<[], Root> = () => (tree) => {
+  visit(tree, "code", (node: Code) => {
     const lang = node.lang?.toLowerCase();
     if (!lang || !SUPPORTED_LANGUAGES.has(lang)) {
       node.lang = "text";
@@ -40,13 +42,12 @@ const normalizeCodeLanguages = () => (tree: any) => {
   });
 };
 
-const highlightCodeBlocks = () => async (tree: any) => {
-  const targets: Array<{ node: { lang?: string; value?: string }; index: number; parent: any }> =
-    [];
+const highlightCodeBlocks: Plugin<[], Root> = () => async (tree) => {
+  const targets: Array<{ node: Code; index: number; parent: Parent }> = [];
   visit(
-    tree as any,
+    tree,
     "code",
-    (node: { lang?: string; value?: string }, index: number | undefined, parent: any) => {
+    (node: Code, index: number | null | undefined, parent: Parent | undefined) => {
       if (!parent || typeof index !== "number") {
         return;
       }
