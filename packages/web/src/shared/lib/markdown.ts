@@ -1,5 +1,5 @@
 import sanitizeHtml from "sanitize-html";
-import { createHighlighter, bundledLanguagesInfo } from "shiki";
+import { createHighlighter, bundledLanguagesInfo, type Highlighter } from "shiki";
 import type { Code, Parent, Root } from "mdast";
 import type { Plugin } from "unified";
 import { unified } from "unified";
@@ -28,10 +28,17 @@ const SUPPORTED_LANGUAGES = new Set(
   bundledLanguagesInfo.flatMap((language) => [language.id, ...(language.aliases ?? [])]),
 );
 
-const highlighterPromise = createHighlighter({
-  themes: ["github-light"],
-  langs: [...SUPPORTED_LANGUAGES],
-});
+let highlighterPromise: Promise<Highlighter> | null = null;
+
+const getHighlighter = (): Promise<Highlighter> => {
+  if (!highlighterPromise) {
+    highlighterPromise = createHighlighter({
+      themes: ["github-light"],
+      langs: [...SUPPORTED_LANGUAGES],
+    });
+  }
+  return highlighterPromise;
+};
 
 const normalizeCodeLanguages: Plugin<[], Root> = () => (tree) => {
   visit(tree, "code", (node: Code) => {
@@ -55,7 +62,10 @@ const highlightCodeBlocks: Plugin<[], Root> = () => async (tree) => {
     },
   );
 
-  const highlighter = await highlighterPromise;
+  if (targets.length === 0) {
+    return;
+  }
+  const highlighter = await getHighlighter();
   for (const { node, index, parent } of targets) {
     const lang = node.lang?.toLowerCase() ?? "text";
     const code = node.value ?? "";
@@ -189,9 +199,9 @@ const sanitizeRenderedHtml = (html: string): string =>
     },
     allowedClasses: {
       a: ["wiki-link", "unresolved", "line"],
-      pre: ["*"],
-      code: ["*"],
-      span: ["*"],
+      pre: ["shiki", "github-light"],
+      code: ["language-*"],
+      span: ["line"],
     },
     transformTags: {},
     allowedSchemes: ["http", "https", "mailto", "tel"],
