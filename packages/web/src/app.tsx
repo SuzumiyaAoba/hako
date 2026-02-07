@@ -89,7 +89,7 @@ type SettingsFormValues = {
 
 type SettingsFieldKey = keyof SettingsFormValues;
 type SettingsFieldErrors = Partial<Record<SettingsFieldKey, string>>;
-type SettingsSection = "storage" | "zettelkasten";
+type SettingsSection = "directories";
 
 type SettingsMessage = {
   type: "success" | "error";
@@ -122,16 +122,10 @@ const SETTINGS_CATEGORIES: ReadonlyArray<{
   fields: ReadonlyArray<SettingsFieldKey>;
 }> = [
   {
-    key: "storage",
-    id: "settings-general",
-    title: "保存場所",
-    fields: ["notesDir"],
-  },
-  {
-    key: "zettelkasten",
-    id: "settings-zettelkasten",
-    title: "Zettelkasten",
-    fields: ["fleeting", "literature", "permanent", "structure", "index"],
+    key: "directories",
+    id: "settings-directories",
+    title: "ディレクトリ",
+    fields: ["notesDir", "fleeting", "literature", "permanent", "structure", "index"],
   },
 ];
 
@@ -199,8 +193,8 @@ const validateSettingsFormValues = (values: SettingsFormValues): SettingsFieldEr
 
 const hasFieldErrors = (errors: SettingsFieldErrors): boolean => Object.keys(errors).length > 0;
 
-const resolveSettingsSection = (value: string | null | undefined): SettingsSection =>
-  value === "zettelkasten" ? "zettelkasten" : "storage";
+const resolveSettingsSection = (_value: string | null | undefined): SettingsSection =>
+  "directories";
 
 const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.Element | null => {
   if (!frontmatter) {
@@ -281,13 +275,11 @@ const MetadataCard = ({ path }: { path: string }): JSX.Element => (
 );
 
 const SettingsForm = ({
-  config,
   values,
   activeSection,
   errors,
   message,
 }: {
-  config: Config;
   values: SettingsFormValues;
   activeSection: SettingsSection;
   errors?: SettingsFieldErrors;
@@ -299,10 +291,10 @@ const SettingsForm = ({
     title: string;
     fields: ReadonlyArray<SettingsFieldKey>;
   } = {
-    key: "storage",
-    id: "settings-general",
-    title: "保存場所",
-    fields: ["notesDir"],
+    key: "directories",
+    id: "settings-directories",
+    title: "ディレクトリ",
+    fields: ["notesDir", "fleeting", "literature", "permanent", "structure", "index"],
   };
   const activeCategory =
     SETTINGS_CATEGORIES.find((category) => category.key === activeSection) ?? fallbackCategory;
@@ -313,23 +305,7 @@ const SettingsForm = ({
 
   return (
     <section className="space-y-6 text-pretty">
-      <div className="space-y-3">
-        <h1 className="text-balance text-2xl font-semibold text-slate-900">設定</h1>
-        <div className="grid gap-2 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
-          <p>
-            読み込み元:{" "}
-            <code className="break-all rounded bg-white/90 px-1.5 py-0.5 text-xs text-slate-900">
-              {config.sourcePath ?? "(未作成 / デフォルト値を使用中)"}
-            </code>
-          </p>
-          <p>
-            保存先:{" "}
-            <code className="break-all rounded bg-white/90 px-1.5 py-0.5 text-xs text-slate-900">
-              {config.writeTargetPath}
-            </code>
-          </p>
-        </div>
-      </div>
+      <h1 className="text-balance text-2xl font-semibold text-slate-900">設定</h1>
       <form
         method="post"
         action={`/settings?section=${activeSection}`}
@@ -341,16 +317,15 @@ const SettingsForm = ({
           <input key={key} type="hidden" name={key} value={values[key]} />
         ))}
         <aside className="sticky top-4 self-start">
-          <nav aria-label="settings categories" className="rounded-xl bg-slate-50 p-4">
-            <p className="mb-2 text-xs font-semibold uppercase text-slate-500">カテゴリ</p>
+          <nav aria-label="settings categories" className="rounded-xl p-4">
             <ul className="space-y-1">
               {SETTINGS_CATEGORIES.map((category) => (
                 <li key={category.id}>
                   <a
                     href={`/settings?section=${category.key}`}
                     className={cn(
-                      "block rounded-md bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white hover:text-slate-900",
-                      category.key === activeSection ? "bg-white text-slate-900" : "",
+                      "block rounded-md px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900",
+                      category.key === activeSection ? "bg-slate-100 text-slate-900" : "",
                     )}
                   >
                     {category.title}
@@ -361,10 +336,7 @@ const SettingsForm = ({
           </nav>
         </aside>
         <div className="space-y-6">
-          <section id={activeCategory.id} className="space-y-4 rounded-xl bg-slate-50 p-4">
-            <h2 className="text-balance text-lg font-semibold text-slate-900">
-              {activeCategory.title}
-            </h2>
+          <section id={activeCategory.id} className="space-y-4 rounded-xl p-4">
             <div className="grid gap-4">
               {activeCategory.fields.map((key) => {
                 const field = getSettingsFieldMeta(key);
@@ -548,6 +520,7 @@ const HtmlPage = ({
   children: React.ReactNode;
 }): JSX.Element => {
   const resolvedSearchQuery = searchQuery ?? "";
+  const isSettingsPage = pathname.startsWith("/settings");
   return (
     <html lang="ja">
       <head>
@@ -575,7 +548,14 @@ const HtmlPage = ({
               <SideMenu notes={sidebarNotes} pathname={pathname} />
             </div>
           ) : null}
-          <main className="mt-10 w-full min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-8">
+          <main
+            className={cn(
+              "mt-10 w-full min-w-0 flex-1",
+              isSettingsPage
+                ? "px-0 py-0 sm:px-0"
+                : "rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-8",
+            )}
+          >
             {children}
           </main>
         </div>
@@ -848,14 +828,13 @@ app.get("/settings", async ({ request }) => {
     renderPage(
       "設定",
       url.pathname,
-      <SettingsForm config={config} values={configToFormValues(config)} activeSection={section} />,
+      <SettingsForm values={configToFormValues(config)} activeSection={section} />,
     ),
   );
 });
 
 app.post("/settings", async ({ request }) => {
   const url = new URL(request.url);
-  const currentConfig = await getConfig();
   const formData = await request.formData();
   const rawSection = formData.get("section");
   const section = resolveSettingsSection(
@@ -870,7 +849,6 @@ app.post("/settings", async ({ request }) => {
         "設定",
         url.pathname,
         <SettingsForm
-          config={currentConfig}
           values={values}
           activeSection={section}
           errors={errors}
@@ -900,7 +878,6 @@ app.post("/settings", async ({ request }) => {
         "設定",
         url.pathname,
         <SettingsForm
-          config={updated}
           values={configToFormValues(updated)}
           activeSection={section}
           message={{ type: "success", text: "設定を保存しました。" }}
@@ -914,7 +891,6 @@ app.post("/settings", async ({ request }) => {
         "設定",
         url.pathname,
         <SettingsForm
-          config={currentConfig}
           values={values}
           activeSection={section}
           message={{ type: "error", text: message }}
