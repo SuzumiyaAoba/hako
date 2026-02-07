@@ -3,30 +3,91 @@ import { readFile, stat } from "node:fs/promises";
 import { basename, extname } from "node:path";
 
 import { eq } from "drizzle-orm";
-import { Elysia } from "elysia";
-import { array, minLength, number, object, pipe, safeParse, string, union } from "valibot";
+import { Elysia, t } from "elysia";
 
-import { extractWikiLinks, NoteIdSchema, type Note } from "@hako/core";
+import { extractWikiLinks, type Note } from "@hako/core";
 
 import type { DbClient } from "../db/queries";
 import { getNoteById, listNotes } from "../db/queries";
 import * as schema from "../db/schema";
 
 /**
- * Response schema for link reindex endpoint.
+ * Error response schema.
  */
-const reindexResponseSchema = object({
-  startedAt: string(),
-  finishedAt: string(),
-  durationMs: number(),
-  notesTotal: number(),
-  notesIndexed: number(),
-  notesSkipped: number(),
-  linksInserted: number(),
-  linksDeleted: number(),
+const ErrorResponseSchema = t.Object({
+  message: t.String(),
 });
 
-void reindexResponseSchema;
+/**
+ * Route params schema for note detail endpoint.
+ */
+const NoteIdParamsSchema = t.Object({
+  id: t.String({ minLength: 1 }),
+});
+
+/**
+ * Route body schema for note import endpoint.
+ */
+const ImportBodySchema = t.Union([
+  t.Object({
+    paths: t.Array(t.String({ minLength: 1 })),
+  }),
+  t.Object({
+    notes: t.Array(
+      t.Object({
+        path: t.String({ minLength: 1 }),
+        title: t.String(),
+      }),
+    ),
+  }),
+]);
+
+/**
+ * Note schema used in API responses.
+ */
+const NoteResponseSchema = t.Object({
+  id: t.String(),
+  title: t.String(),
+  path: t.String(),
+  content: t.String(),
+  contentHash: t.String(),
+  updatedAt: t.String(),
+});
+
+/**
+ * Response schema for note import endpoint.
+ */
+const ImportResponseSchema = t.Object({
+  startedAt: t.String(),
+  finishedAt: t.String(),
+  durationMs: t.Number(),
+  total: t.Number(),
+  created: t.Number(),
+  updated: t.Number(),
+  skipped: t.Number(),
+  notes: t.Array(
+    t.Object({
+      id: t.String(),
+      title: t.String(),
+      path: t.String(),
+      status: t.Union([t.Literal("created"), t.Literal("updated"), t.Literal("skipped")]),
+    }),
+  ),
+});
+
+/**
+ * Response schema for link reindex endpoint.
+ */
+const ReindexResponseSchema = t.Object({
+  startedAt: t.String(),
+  finishedAt: t.String(),
+  durationMs: t.Number(),
+  notesTotal: t.Number(),
+  notesIndexed: t.Number(),
+  notesSkipped: t.Number(),
+  linksInserted: t.Number(),
+  linksDeleted: t.Number(),
+});
 
 /**
  * Reindex aggregation stats.
@@ -47,29 +108,6 @@ type LinkInsert = typeof schema.links.$inferInsert;
  * note_link_states table insert shape.
  */
 type NoteLinkStateInsert = typeof schema.noteLinkStates.$inferInsert;
-
-/**
- * Response schema for note import endpoint.
- */
-const importResponseSchema = object({
-  startedAt: string(),
-  finishedAt: string(),
-  durationMs: number(),
-  total: number(),
-  created: number(),
-  updated: number(),
-  skipped: number(),
-  notes: array(
-    object({
-      id: string(),
-      title: string(),
-      path: string(),
-      status: string(),
-    }),
-  ),
-});
-
-void importResponseSchema;
 
 /**
  * Per-note import status.
@@ -156,230 +194,224 @@ const buildLinkInserts = (
 };
 
 /**
- * Creates JSON response object with status code.
- */
-const json = (body: unknown, status = 200): Response =>
-  Response.json(body, {
-    status,
-  });
-
-/**
  * Builds notes API routes.
  */
 export const createNotesRoutes = (db: DbClient) => {
-  const noteIdParamSchema = object({
-    id: NoteIdSchema,
-  });
-
-  const importNoteSchema = object({
-    path: pipe(string(), minLength(1)),
-    title: string(),
-  });
-
-  const importBodySchema = union([
-    object({
-      paths: array(pipe(string(), minLength(1))),
-    }),
-    object({
-      notes: array(importNoteSchema),
-    }),
-  ]);
-
   return new Elysia()
-    .get("/notes", async () => await listNotes(db))
-    .get("/notes/:id", async ({ params }) => {
-      const parsedParams = safeParse(noteIdParamSchema, params);
-      if (!parsedParams.success) {
-        return json({ message: "Invalid note id" }, 400);
-      }
-
-      const note = await getNoteById(db, parsedParams.output.id);
-      if (!note) {
-        return json({ message: "Note not found" }, 404);
-      }
-
-      try {
-        const content = await readFile(note.path, "utf-8");
-        return json({ ...note, content });
-      } catch {
-        return json({ message: "Note file not found" }, 404);
-      }
+    .get("/notes", async () => await listNotes(db), {
+      response: {
+        200: t.Array(NoteResponseSchema),
+      },
     })
-    .post("/notes/import", async ({ body }) => {
-      const parsedBody = safeParse(importBodySchema, body);
-      if (!parsedBody.success) {
-        return json({ message: "Invalid request body" }, 400);
-      }
+    .get(
+      "/notes/:id",
+      async ({ params, set }) => {
+        const note = await getNoteById(db, params.id);
+        if (!note) {
+          set.status = 404;
+          return { message: "Note not found" };
+        }
 
-      const startedAt = new Date();
-      const startedAtMs = startedAt.getTime();
-      const requestBody = parsedBody.output;
-      const notesInput =
-        "notes" in requestBody
-          ? requestBody.notes
-          : requestBody.paths.map((path) => ({ path, title: "" }));
-      const paths = notesInput.map((note) => note.path);
+        try {
+          const content = await readFile(note.path, "utf-8");
+          return { ...note, content };
+        } catch {
+          set.status = 404;
+          return { message: "Note file not found" };
+        }
+      },
+      {
+        params: NoteIdParamsSchema,
+        response: {
+          200: NoteResponseSchema,
+          404: ErrorResponseSchema,
+        },
+      },
+    )
+    .post(
+      "/notes/import",
+      async ({ body }) => {
+        const startedAt = new Date();
+        const startedAtMs = startedAt.getTime();
+        const notesInput =
+          "notes" in body ? body.notes : body.paths.map((path) => ({ path, title: "" }));
+        const paths = notesInput.map((note) => note.path);
 
-      const results: ImportNoteResult[] = [];
-      const imports = await Promise.all(
-        notesInput.map(async (note) => ({
-          path: note.path,
-          title: note.title.trim() || deriveTitleFromPath(note.path),
-          sourceHash: await computeSourceFingerprint(note.path),
-        })),
-      );
+        const results: ImportNoteResult[] = [];
+        const imports = await Promise.all(
+          notesInput.map(async (note) => ({
+            path: note.path,
+            title: note.title.trim() || deriveTitleFromPath(note.path),
+            sourceHash: await computeSourceFingerprint(note.path),
+          })),
+        );
 
-      const stats = await db.transaction(async (tx): Promise<ImportStats> => {
-        let created = 0;
-        let updated = 0;
-        let skipped = 0;
+        const stats = await db.transaction(async (tx): Promise<ImportStats> => {
+          let created = 0;
+          let updated = 0;
+          let skipped = 0;
 
-        for (const entry of imports) {
-          const { path, title, sourceHash } = entry;
-          const existing = await tx
-            .select()
-            .from(schema.notes)
-            .where(eq(schema.notes.path, path))
-            .get();
+          for (const entry of imports) {
+            const { path, title, sourceHash } = entry;
+            const existing = await tx
+              .select()
+              .from(schema.notes)
+              .where(eq(schema.notes.path, path))
+              .get();
 
-          if (!existing) {
-            const id = computeNoteId(path);
+            if (!existing) {
+              const id = computeNoteId(path);
+              await tx
+                .insert(schema.notes)
+                .values({
+                  id,
+                  title,
+                  path,
+                  content: "",
+                  contentHash: sourceHash,
+                  updatedAt: new Date().toISOString(),
+                })
+                .run();
+              results.push({ id, title, path, status: "created" });
+              created += 1;
+              continue;
+            }
+
+            const canUpdateContentHash = existing.content === "";
+            const shouldUpdate =
+              existing.title !== title ||
+              (canUpdateContentHash && existing.contentHash !== sourceHash);
+
+            if (!shouldUpdate) {
+              results.push({
+                id: existing.id,
+                title: existing.title,
+                path: existing.path,
+                status: "skipped",
+              });
+              skipped += 1;
+              continue;
+            }
+
             await tx
-              .insert(schema.notes)
-              .values({
-                id,
+              .update(schema.notes)
+              .set({
                 title,
-                path,
-                content: "",
-                contentHash: sourceHash,
                 updatedAt: new Date().toISOString(),
+                ...(canUpdateContentHash ? { contentHash: sourceHash } : {}),
               })
+              .where(eq(schema.notes.path, path))
               .run();
-            results.push({ id, title, path, status: "created" });
-            created += 1;
-            continue;
+
+            results.push({ id: existing.id, title, path, status: "updated" });
+            updated += 1;
           }
 
-          const canUpdateContentHash = existing.content === "";
-          const shouldUpdate =
-            existing.title !== title ||
-            (canUpdateContentHash && existing.contentHash !== sourceHash);
+          return { created, updated, skipped };
+        });
 
-          if (!shouldUpdate) {
-            results.push({
-              id: existing.id,
-              title: existing.title,
-              path: existing.path,
-              status: "skipped",
-            });
-            skipped += 1;
-            continue;
-          }
-
-          await tx
-            .update(schema.notes)
-            .set({
-              title,
-              updatedAt: new Date().toISOString(),
-              ...(canUpdateContentHash ? { contentHash: sourceHash } : {}),
-            })
-            .where(eq(schema.notes.path, path))
-            .run();
-
-          results.push({ id: existing.id, title, path, status: "updated" });
-          updated += 1;
-        }
-
-        return { created, updated, skipped };
-      });
-
-      const finishedAt = new Date();
-      const durationMs = finishedAt.getTime() - startedAtMs;
-
-      return json({
-        startedAt: startedAt.toISOString(),
-        finishedAt: finishedAt.toISOString(),
-        durationMs,
-        total: paths.length,
-        created: stats.created,
-        updated: stats.updated,
-        skipped: stats.skipped,
-        notes: results,
-      });
-    })
-    .post("/notes/reindex", async () => {
-      const startedAt = new Date();
-      const startedAtMs = startedAt.getTime();
-      const notes = await listNotes(db);
-      const titleMap = buildTitleMap(notes);
-      const existingStates = await db.select().from(schema.noteLinkStates).all();
-      const stateMap = new Map(existingStates.map((state) => [state.noteId, state.contentHash]));
-      const indexedAt = new Date().toISOString();
-
-      const stats = await db.transaction(async (tx): Promise<ReindexStats> => {
-        let notesIndexed = 0;
-        let notesSkipped = 0;
-        let linksInserted = 0;
-        let linksDeleted = 0;
-
-        for (const note of notes) {
-          const previousHash = stateMap.get(note.id);
-          if (previousHash === note.contentHash) {
-            notesSkipped += 1;
-            continue;
-          }
-
-          notesIndexed += 1;
-          const deleteResult = await tx
-            .delete(schema.links)
-            .where(eq(schema.links.fromNoteId, note.id))
-            .run();
-          linksDeleted += deleteResult.rowsAffected ?? 0;
-
-          const { links, total } = buildLinkInserts(note, titleMap);
-          if (total > 0) {
-            await tx.insert(schema.links).values(links).run();
-            linksInserted += total;
-          }
-
-          const state: NoteLinkStateInsert = {
-            noteId: note.id,
-            contentHash: note.contentHash,
-            indexedAt,
-          };
-          await tx
-            .insert(schema.noteLinkStates)
-            .values(state)
-            .onConflictDoUpdate({
-              target: schema.noteLinkStates.noteId,
-              set: {
-                contentHash: note.contentHash,
-                indexedAt,
-              },
-            })
-            .run();
-        }
+        const finishedAt = new Date();
+        const durationMs = finishedAt.getTime() - startedAtMs;
 
         return {
-          notesIndexed,
-          notesSkipped,
-          linksInserted,
-          linksDeleted,
+          startedAt: startedAt.toISOString(),
+          finishedAt: finishedAt.toISOString(),
+          durationMs,
+          total: paths.length,
+          created: stats.created,
+          updated: stats.updated,
+          skipped: stats.skipped,
+          notes: results,
         };
-      });
+      },
+      {
+        body: ImportBodySchema,
+        response: {
+          200: ImportResponseSchema,
+        },
+      },
+    )
+    .post(
+      "/notes/reindex",
+      async () => {
+        const startedAt = new Date();
+        const startedAtMs = startedAt.getTime();
+        const notes = await listNotes(db);
+        const titleMap = buildTitleMap(notes);
+        const existingStates = await db.select().from(schema.noteLinkStates).all();
+        const stateMap = new Map(existingStates.map((state) => [state.noteId, state.contentHash]));
+        const indexedAt = new Date().toISOString();
 
-      const finishedAt = new Date();
-      const durationMs = finishedAt.getTime() - startedAtMs;
+        const stats = await db.transaction(async (tx): Promise<ReindexStats> => {
+          let notesIndexed = 0;
+          let notesSkipped = 0;
+          let linksInserted = 0;
+          let linksDeleted = 0;
 
-      return json({
-        startedAt: startedAt.toISOString(),
-        finishedAt: finishedAt.toISOString(),
-        durationMs,
-        notesTotal: notes.length,
-        notesIndexed: stats.notesIndexed,
-        notesSkipped: stats.notesSkipped,
-        linksInserted: stats.linksInserted,
-        linksDeleted: stats.linksDeleted,
-      });
-    });
+          for (const note of notes) {
+            const previousHash = stateMap.get(note.id);
+            if (previousHash === note.contentHash) {
+              notesSkipped += 1;
+              continue;
+            }
+
+            notesIndexed += 1;
+            const deleteResult = await tx
+              .delete(schema.links)
+              .where(eq(schema.links.fromNoteId, note.id))
+              .run();
+            linksDeleted += deleteResult.rowsAffected ?? 0;
+
+            const { links, total } = buildLinkInserts(note, titleMap);
+            if (total > 0) {
+              await tx.insert(schema.links).values(links).run();
+              linksInserted += total;
+            }
+
+            const state: NoteLinkStateInsert = {
+              noteId: note.id,
+              contentHash: note.contentHash,
+              indexedAt,
+            };
+            await tx
+              .insert(schema.noteLinkStates)
+              .values(state)
+              .onConflictDoUpdate({
+                target: schema.noteLinkStates.noteId,
+                set: {
+                  contentHash: note.contentHash,
+                  indexedAt,
+                },
+              })
+              .run();
+          }
+
+          return {
+            notesIndexed,
+            notesSkipped,
+            linksInserted,
+            linksDeleted,
+          };
+        });
+
+        const finishedAt = new Date();
+        const durationMs = finishedAt.getTime() - startedAtMs;
+
+        return {
+          startedAt: startedAt.toISOString(),
+          finishedAt: finishedAt.toISOString(),
+          durationMs,
+          notesTotal: notes.length,
+          notesIndexed: stats.notesIndexed,
+          notesSkipped: stats.notesSkipped,
+          linksInserted: stats.linksInserted,
+          linksDeleted: stats.linksDeleted,
+        };
+      },
+      {
+        response: {
+          200: ReindexResponseSchema,
+        },
+      },
+    );
 };
