@@ -96,7 +96,7 @@ describe("pages smoke", () => {
   });
 
   it("renders settings page", async () => {
-    const response = await app.handle(new Request("http://localhost/settings"));
+    const response = await app.handle(new Request("http://localhost/settings/directories"));
     const html = await response.text();
     expect(html).toContain("設定");
     expect(html).toContain("Notes Root");
@@ -112,7 +112,7 @@ describe("pages smoke", () => {
       index: "i",
     });
     const response = await app.handle(
-      new Request("http://localhost/settings", {
+      new Request("http://localhost/settings/directories", {
         method: "POST",
         headers: {
           "content-type": "application/x-www-form-urlencoded",
