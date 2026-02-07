@@ -7,16 +7,33 @@ import { db, dbReady } from "./db";
 import { createOpenApiDocument } from "./openapi";
 import { createNotesRoutes } from "./routes/notes";
 
+/**
+ * Node-style require function for CommonJS interop packages.
+ */
 const require = createRequire(import.meta.url);
+
+/**
+ * Elysia node adapter module loaded via CommonJS interop.
+ */
 const nodeAdapter = require("@elysiajs/node") as { node: () => unknown };
-// TODO: Wire appConfig.notesDir/noteDirectories into note discovery and import flows.
+
+/**
+ * Loaded application configuration.
+ * @todo Wire appConfig.notesDir/noteDirectories into note discovery and import flows.
+ */
 const appConfig = await loadHakoConfigCached();
 
+/**
+ * API application instance.
+ */
 const app = new Elysia({ adapter: nodeAdapter.node() as any })
   .get("/", () => "Hako API")
   .use(createNotesRoutes(db))
   .get("/openapi.json", () => createOpenApiDocument());
 
+/**
+ * Listening port for API server.
+ */
 const port = Number(process.env["PORT"] ?? 8787);
 
 await dbReady;

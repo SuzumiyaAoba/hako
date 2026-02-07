@@ -6,9 +6,15 @@ import { drizzle } from "drizzle-orm/libsql";
 
 import * as schema from "./schema";
 
+/**
+ * Resolves database URL from environment with fallback.
+ */
 const resolveDatabaseUrl = (): string =>
   process.env["DATABASE_URL"]?.trim() || "file:./data/hako.db";
 
+/**
+ * Resolves local filesystem path from `file:` database URL.
+ */
 const toLocalFilePath = (databaseUrl: string): string | null => {
   if (!databaseUrl.startsWith("file:")) {
     return null;
@@ -38,6 +44,9 @@ const toLocalFilePath = (databaseUrl: string): string | null => {
   return null;
 };
 
+/**
+ * Creates database directory for local file-based URLs.
+ */
 const ensureDatabaseDir = (databaseUrl: string): void => {
   const filePath = toLocalFilePath(databaseUrl);
   if (!filePath) {
@@ -47,6 +56,9 @@ const ensureDatabaseDir = (databaseUrl: string): void => {
   mkdirSync(dirname(filePath), { recursive: true });
 };
 
+/**
+ * Bootstrap DDL statements used for local startup.
+ */
 const SCHEMA_SQL_STATEMENTS = [
   `create table if not exists notes (
     id text primary key,
@@ -97,22 +109,40 @@ const SCHEMA_SQL_STATEMENTS = [
   )`,
 ] as const;
 
+/**
+ * Executes bootstrap schema SQL statements.
+ */
 const initializeSchema = async (client: Client): Promise<void> => {
   for (const sql of SCHEMA_SQL_STATEMENTS) {
     await client.execute(sql);
   }
 };
 
+/**
+ * Active database URL.
+ */
 const databaseUrl = resolveDatabaseUrl();
 ensureDatabaseDir(databaseUrl);
 
+/**
+ * Optional auth token for remote libSQL endpoints.
+ */
 const authToken = process.env["DATABASE_AUTH_TOKEN"]?.trim();
+/**
+ * libSQL client instance.
+ */
 const client = createClient({
   url: databaseUrl,
   ...(authToken ? { authToken } : {}),
 });
 
+/**
+ * Drizzle database instance.
+ */
 const db = drizzle(client, { schema });
+/**
+ * Startup promise that ensures schema initialization is complete.
+ */
 const dbReady = initializeSchema(client);
 dbReady.catch(() => undefined);
 

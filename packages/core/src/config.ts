@@ -15,8 +15,14 @@ import {
 } from "valibot";
 import { parse as parseYaml } from "yaml";
 
+/**
+ * Schema for a non-empty note directory segment.
+ */
 const NoteDirectorySchema = pipe(string(), minLength(1));
 
+/**
+ * Schema for zettelkasten role to directory mapping.
+ */
 const ZettelkastenDirectoryMappingSchema = object({
   fleeting: NoteDirectorySchema,
   literature: NoteDirectorySchema,
@@ -25,6 +31,9 @@ const ZettelkastenDirectoryMappingSchema = object({
   index: NoteDirectorySchema,
 });
 
+/**
+ * Raw user config schema.
+ */
 const RawHakoConfigSchema = object({
   notesDir: optional(NoteDirectorySchema),
   zettelkasten: optional(
@@ -34,10 +43,19 @@ const RawHakoConfigSchema = object({
   ),
 });
 
+/**
+ * Parsed user config before normalization.
+ */
 type RawHakoConfig = InferOutput<typeof RawHakoConfigSchema>;
 
+/**
+ * Default note root directory.
+ */
 const DEFAULT_NOTES_DIR = "~/hako";
 
+/**
+ * Default role-directory mapping for zettelkasten buckets.
+ */
 export const DEFAULT_ZETTELKASTEN_DIRECTORIES = {
   fleeting: "fleeting",
   literature: "literature",
@@ -46,10 +64,19 @@ export const DEFAULT_ZETTELKASTEN_DIRECTORIES = {
   index: "index",
 } as const;
 
+/**
+ * Valid zettelkasten role names.
+ */
 export type ZettelkastenRole = keyof typeof DEFAULT_ZETTELKASTEN_DIRECTORIES;
 
+/**
+ * Directory mapping keyed by zettelkasten role.
+ */
 export type ZettelkastenDirectoryMapping = Record<ZettelkastenRole, string>;
 
+/**
+ * Fully resolved runtime configuration.
+ */
 export type HakoConfig = {
   sourcePath: string | null;
   notesDir: string;
@@ -59,16 +86,28 @@ export type HakoConfig = {
   noteDirectories: Record<ZettelkastenRole, string>;
 };
 
+/**
+ * Options for loading configuration.
+ */
 export type LoadHakoConfigOptions = {
   configPath?: string;
 };
 
+/**
+ * Options for cached configuration loading.
+ */
 export type LoadHakoConfigCachedOptions = LoadHakoConfigOptions & {
   reload?: boolean;
 };
 
+/**
+ * In-process cache keyed by resolved config source.
+ */
 const configCache = new Map<string, Promise<HakoConfig>>();
 
+/**
+ * Expands `~` to user home.
+ */
 const resolveUserPath = (value: string): string => {
   if (value.startsWith("~/")) {
     return join(homedir(), value.slice(2));
@@ -79,12 +118,21 @@ const resolveUserPath = (value: string): string => {
   return value;
 };
 
+/**
+ * Resolves relative paths against current working directory.
+ */
 const resolveAbsolutePath = (value: string): string =>
   isAbsolute(value) ? value : resolve(process.cwd(), value);
 
+/**
+ * Trims and resolves an absolute path with home expansion.
+ */
 const toResolvedAbsolutePath = (value: string): string =>
   resolveAbsolutePath(resolveUserPath(value.trim()));
 
+/**
+ * Ensures all mapped directory names are unique.
+ */
 const ensureUniqueDirectoryNames = (mapping: ZettelkastenDirectoryMapping): void => {
   const seen = new Set<string>();
 
@@ -99,11 +147,17 @@ const ensureUniqueDirectoryNames = (mapping: ZettelkastenDirectoryMapping): void
   }
 };
 
+/**
+ * Returns default config path based on XDG base directory spec.
+ */
 const resolveDefaultConfigPath = (): string => {
   const xdgPaths = xdgAppPaths({ name: "hako", isolated: true });
   return join(xdgPaths.config(), "config.yaml");
 };
 
+/**
+ * Builds ordered candidate config paths.
+ */
 const resolveCandidatePaths = (configPath?: string): string[] => {
   if (configPath && configPath.trim().length > 0) {
     return [toResolvedAbsolutePath(configPath)];
@@ -120,6 +174,9 @@ const resolveCandidatePaths = (configPath?: string): string[] => {
   return [defaultYamlPath, `${defaultBasePath}.yml`, `${defaultBasePath}.json`];
 };
 
+/**
+ * Builds cache key for given loading options.
+ */
 const resolveCacheKey = (options: LoadHakoConfigOptions = {}): string => {
   const directPath = options.configPath?.trim();
   if (directPath) {
@@ -134,6 +191,9 @@ const resolveCacheKey = (options: LoadHakoConfigOptions = {}): string => {
   return "default";
 };
 
+/**
+ * Checks whether the path exists.
+ */
 const pathExists = async (path: string): Promise<boolean> => {
   try {
     await access(path);
@@ -143,6 +203,9 @@ const pathExists = async (path: string): Promise<boolean> => {
   }
 };
 
+/**
+ * Picks the first existing config path from candidates.
+ */
 const pickConfigPath = async (candidates: string[]): Promise<string | null> => {
   for (const path of candidates) {
     if (await pathExists(path)) {
@@ -152,6 +215,9 @@ const pickConfigPath = async (candidates: string[]): Promise<string | null> => {
   return null;
 };
 
+/**
+ * Parses config text from YAML or JSON based on extension.
+ */
 const parseConfigText = (path: string, source: string): unknown => {
   const extension = extname(path).toLowerCase();
   if (extension === ".json") {
@@ -161,6 +227,9 @@ const parseConfigText = (path: string, source: string): unknown => {
   return parseYaml(source);
 };
 
+/**
+ * Normalizes validated config into runtime format.
+ */
 const buildConfig = (raw: RawHakoConfig, sourcePath: string | null): HakoConfig => {
   const directories: ZettelkastenDirectoryMapping = {
     ...DEFAULT_ZETTELKASTEN_DIRECTORIES,
@@ -187,6 +256,9 @@ const buildConfig = (raw: RawHakoConfig, sourcePath: string | null): HakoConfig 
   };
 };
 
+/**
+ * Loads config from disk and validates it.
+ */
 export const loadHakoConfig = async (options: LoadHakoConfigOptions = {}): Promise<HakoConfig> => {
   const candidatePaths = resolveCandidatePaths(options.configPath);
   const resolvedPath = await pickConfigPath(candidatePaths);
@@ -210,6 +282,9 @@ export const loadHakoConfig = async (options: LoadHakoConfigOptions = {}): Promi
   }
 };
 
+/**
+ * Clears all cache entries or one specific entry.
+ */
 export const clearHakoConfigCache = (options?: LoadHakoConfigOptions): void => {
   if (!options) {
     configCache.clear();
@@ -220,6 +295,9 @@ export const clearHakoConfigCache = (options?: LoadHakoConfigOptions): void => {
   configCache.delete(key);
 };
 
+/**
+ * Loads config with in-process cache support.
+ */
 export const loadHakoConfigCached = async (
   options: LoadHakoConfigCachedOptions = {},
 ): Promise<HakoConfig> => {
@@ -244,5 +322,8 @@ export const loadHakoConfigCached = async (
   return await pending;
 };
 
+/**
+ * Forces config reload by bypassing cache.
+ */
 export const reloadHakoConfig = async (options: LoadHakoConfigOptions = {}): Promise<HakoConfig> =>
   await loadHakoConfigCached({ ...options, reload: true });

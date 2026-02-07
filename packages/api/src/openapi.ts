@@ -1,3 +1,6 @@
+/**
+ * Builds a minimal OpenAPI document for current API routes.
+ */
 export const createOpenApiDocument = () => ({
   openapi: "3.0.0",
   info: {
