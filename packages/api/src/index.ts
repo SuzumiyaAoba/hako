@@ -1,10 +1,15 @@
+import { createRequire } from "node:module";
+
 import { Elysia } from "elysia";
 
 import { db } from "./db";
 import { createOpenApiDocument } from "./openapi";
 import { createNotesRoutes } from "./routes/notes";
 
-const app = new Elysia()
+const require = createRequire(import.meta.url);
+const nodeAdapter = require("@elysiajs/node") as { node: () => unknown };
+
+const app = new Elysia({ adapter: nodeAdapter.node() as any })
   .get("/", () => "Hako API")
   .use(createNotesRoutes(db))
   .get("/openapi.json", () => createOpenApiDocument());
