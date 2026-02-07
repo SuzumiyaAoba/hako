@@ -221,7 +221,7 @@ const SideMenu = ({
   notes: ReadonlyArray<Pick<Note, "id" | "title">>;
   pathname: string;
 }): JSX.Element => (
-  <aside className="lg:sticky lg:top-4 lg:max-h-dvh">
+  <aside>
     <nav className="flex flex-col gap-3" aria-labelledby="notes-menu-title">
       <h2 id="notes-menu-title" className="text-xs font-semibold uppercase text-slate-500">
         Notes
@@ -292,7 +292,7 @@ const HtmlPage = ({
           )}
         >
           {sidebarNotes ? (
-            <div className="mt-10 lg:mt-10 lg:w-72 lg:shrink-0">
+            <div className="mt-10 lg:mt-4 lg:w-72 lg:shrink-0 lg:self-start lg:sticky lg:top-4">
               <SideMenu notes={sidebarNotes} pathname={pathname} />
             </div>
           ) : null}
