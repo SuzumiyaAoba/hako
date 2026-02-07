@@ -3,8 +3,8 @@ name: typescript
 description: Use this to write TypeScript.
 ---
 
-## TypeScript
+# TypeScript
 
-### Coding Style
+## Coding Style
 
 See references/coding-style.md for details.

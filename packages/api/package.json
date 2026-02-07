@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --hot src/index.ts",
+    "dev": "tsx watch --include \"../core/src/**/*.ts\" src/index.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "start": "bun run dist/index.js",
+    "start": "tsx dist/index.js",
     "lint": "echo \"no lint configured\"",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
@@ -15,8 +15,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@elysiajs/node": "^1.4.1",
     "@hako/core": "workspace:*",
-    "better-sqlite3": "^12.6.2",
+    "@libsql/client": "^0.15.15",
     "drizzle-orm": "^0.45.1",
     "elysia": "^1.4.16",
     "valibot": "^1.2.0"
@@ -24,7 +25,6 @@
   "devDependencies": {
     "@total-typescript/ts-reset": "^0.6.1",
     "@tsconfig/strictest": "^2.0.8",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "20.14.15",
     "drizzle-kit": "^0.31.8",
     "tsx": "4.19.0",
