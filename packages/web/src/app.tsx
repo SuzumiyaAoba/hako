@@ -114,6 +114,32 @@ const SETTINGS_FIELDS: ReadonlyArray<{
   { key: "index", label: "Index", description: "索引ノート" },
 ];
 
+const SETTINGS_CATEGORIES: ReadonlyArray<{
+  id: string;
+  title: string;
+  fields: ReadonlyArray<SettingsFieldKey>;
+}> = [
+  {
+    id: "settings-general",
+    title: "全般",
+    fields: ["notesDir"],
+  },
+  {
+    id: "settings-zettelkasten",
+    title: "Zettelkasten",
+    fields: ["fleeting", "literature", "permanent", "structure", "index"],
+  },
+];
+
+const getSettingsFieldMeta = (
+  key: SettingsFieldKey,
+): { key: SettingsFieldKey; label: string; description: string } =>
+  SETTINGS_FIELDS.find((field) => field.key === key) ?? {
+    key,
+    label: key,
+    description: "",
+  };
+
 const configToFormValues = (config: Config): SettingsFormValues => ({
   notesDir: config.notesDir,
   fleeting: config.zettelkasten.directories.fleeting,
@@ -276,55 +302,90 @@ const SettingsForm = ({
         </p>
       </div>
     </div>
-    <form method="post" action="/settings" className="space-y-5">
-      <div className="grid gap-4">
-        {SETTINGS_FIELDS.map((field) => {
-          const value = values[field.key];
-          const error = errors?.[field.key];
-
-          return (
-            <label key={field.key} className="grid gap-2">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-semibold text-slate-900">{field.label}</span>
-                <span className="text-xs text-slate-500">{field.description}</span>
-              </div>
-              <input
-                type="text"
-                name={field.key}
-                defaultValue={value}
-                aria-invalid={error ? "true" : undefined}
-                aria-describedby={error ? `${field.key}-error` : undefined}
-                className={cn(
-                  "h-10 w-full rounded-lg border bg-white px-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300",
-                  error ? "border-rose-400 focus:ring-rose-200" : "border-slate-200",
-                )}
-              />
-              {error ? (
-                <p id={`${field.key}-error`} className="text-xs text-rose-600">
-                  {error}
-                </p>
-              ) : null}
-            </label>
-          );
-        })}
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+    <form
+      method="post"
+      action="/settings"
+      className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)]"
+    >
+      <aside className="lg:sticky lg:top-4 lg:self-start">
+        <nav
+          aria-label="settings categories"
+          className="rounded-xl border border-slate-200 bg-slate-50 p-4"
         >
-          設定を保存
-        </button>
-        {message ? (
-          <p
-            className={cn(
-              "text-sm",
-              message.type === "success" ? "text-emerald-700" : "text-rose-700",
-            )}
+          <ul className="space-y-1">
+            {SETTINGS_CATEGORIES.map((category) => (
+              <li key={category.id}>
+                <a
+                  href={`#${category.id}`}
+                  className="block rounded-md px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white hover:text-slate-900"
+                >
+                  {category.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </aside>
+      <div className="space-y-6">
+        {SETTINGS_CATEGORIES.map((category) => (
+          <section
+            key={category.id}
+            id={category.id}
+            className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4"
           >
-            {message.text}
-          </p>
-        ) : null}
+            <h2 className="text-balance text-lg font-semibold text-slate-900">{category.title}</h2>
+            <div className="grid gap-4">
+              {category.fields.map((key) => {
+                const field = getSettingsFieldMeta(key);
+                const value = values[field.key];
+                const error = errors?.[field.key];
+
+                return (
+                  <label key={field.key} className="grid gap-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-semibold text-slate-900">{field.label}</span>
+                      <span className="text-xs text-slate-500">{field.description}</span>
+                    </div>
+                    <input
+                      type="text"
+                      name={field.key}
+                      defaultValue={value}
+                      aria-invalid={error ? "true" : undefined}
+                      aria-describedby={error ? `${field.key}-error` : undefined}
+                      className={cn(
+                        "h-10 w-full rounded-lg border bg-white px-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300",
+                        error ? "border-rose-400 focus:ring-rose-200" : "border-slate-200",
+                      )}
+                    />
+                    {error ? (
+                      <p id={`${field.key}-error`} className="text-xs text-rose-600">
+                        {error}
+                      </p>
+                    ) : null}
+                  </label>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+        <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-6">
+          <button
+            type="submit"
+            className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            設定を保存
+          </button>
+          {message ? (
+            <p
+              className={cn(
+                "text-sm",
+                message.type === "success" ? "text-emerald-700" : "text-rose-700",
+              )}
+            >
+              {message.text}
+            </p>
+          ) : null}
+        </div>
       </div>
     </form>
   </section>
@@ -387,15 +448,14 @@ const Header = ({
         </a>
         <a
           className={cn(
-            "flex items-center gap-1 text-slate-600 hover:text-slate-900",
-            pathname.startsWith("/settings") &&
-              "font-semibold text-slate-900 underline decoration-slate-300 underline-offset-8",
+            "inline-flex size-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+            pathname.startsWith("/settings") && "bg-slate-100 text-slate-900",
           )}
           href="/settings"
+          aria-label="Settings"
           aria-current={pathname.startsWith("/settings") ? "page" : undefined}
         >
-          <IoSettingsOutline size={14} aria-hidden="true" />
-          Settings
+          <IoSettingsOutline size={16} aria-hidden="true" />
         </a>
       </nav>
     </div>
@@ -750,21 +810,20 @@ app.get("/graph", async ({ request }) => {
 
 app.get("/settings", async ({ request }) => {
   const url = new URL(request.url);
-  const [notes, config] = await Promise.all([getNotes(), getConfig()]);
+  const config = await getConfig();
 
   return htmlResponse(
     renderPage(
       "設定",
       url.pathname,
       <SettingsForm config={config} values={configToFormValues(config)} />,
-      notes,
     ),
   );
 });
 
 app.post("/settings", async ({ request }) => {
   const url = new URL(request.url);
-  const [notes, currentConfig] = await Promise.all([getNotes(), getConfig()]);
+  const currentConfig = await getConfig();
   const formData = await request.formData();
   const values = extractSettingsFormValues(formData);
   const errors = validateSettingsFormValues(values);
@@ -780,7 +839,6 @@ app.post("/settings", async ({ request }) => {
           errors={errors}
           message={{ type: "error", text: "入力内容を確認してください。" }}
         />,
-        notes,
       ),
       400,
     );
@@ -809,7 +867,6 @@ app.post("/settings", async ({ request }) => {
           values={configToFormValues(updated)}
           message={{ type: "success", text: "設定を保存しました。" }}
         />,
-        notes,
       ),
     );
   } catch (error) {
@@ -823,7 +880,6 @@ app.post("/settings", async ({ request }) => {
           values={values}
           message={{ type: "error", text: message }}
         />,
-        notes,
       ),
       400,
     );
