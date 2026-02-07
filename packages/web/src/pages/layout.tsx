@@ -174,7 +174,10 @@ const HtmlPage = ({
           .sidebar-footer {
             margin-top: auto;
             border-top: 1px solid rgb(226 232 240);
-            padding: 0.75rem;
+            height: 55px;
+            padding: 0 0.75rem;
+            display: flex;
+            align-items: center;
           }
           .app-layout #sidebar-toggle:not(:checked) ~ .app-main {
             margin-left: 3.5rem;
