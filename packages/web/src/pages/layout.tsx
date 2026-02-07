@@ -1,3 +1,4 @@
+import { FaInbox } from "react-icons/fa";
 import { IoSettingsOutline } from "react-icons/io5";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -49,14 +50,14 @@ const NotesListMenu = ({
 const SidebarSettingsLink = ({ pathname }: { pathname: string }): JSX.Element => (
   <a
     className={cn(
-      "sidebar-setting-link inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+      "sidebar-setting-link inline-flex items-center rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900",
       pathname.startsWith("/settings") && "bg-slate-100 font-semibold text-slate-900",
     )}
     href="/settings/directories"
     aria-label="設定"
     aria-current={pathname.startsWith("/settings") ? "page" : undefined}
   >
-    <IoSettingsOutline size={16} aria-hidden="true" />
+    <IoSettingsOutline size={21} aria-hidden="true" />
     <span className="sidebar-label">設定</span>
   </a>
 );
@@ -104,7 +105,7 @@ const HtmlPage = ({
             display: flex;
             flex-direction: column;
             background-color: rgb(241 245 249);
-            border-right: 1px solid rgb(226 232 240);
+            box-shadow: inset -1px 0 0 rgb(226 232 240);
             width: 17rem;
             min-width: 17rem;
             max-width: 17rem;
@@ -134,15 +135,31 @@ const HtmlPage = ({
           .app-layout #sidebar-toggle:not(:checked) ~ .app-sidebar .sidebar-label {
             display: none;
           }
-          .app-layout #sidebar-toggle:not(:checked) ~ .app-sidebar .sidebar-graph-link {
+          .sidebar-toggle-row {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+          }
+          .sidebar-toggle-button {
+            display: inline-flex;
+            align-items: center;
             justify-content: center;
-            padding-left: 0;
-            padding-right: 0;
+            padding: 0.5rem 5.5px;
+          }
+          .sidebar-setting-link {
+            gap: 0.5rem;
+            padding: 0.25rem 5.5px;
           }
           .app-layout #sidebar-toggle:not(:checked) ~ .app-sidebar .sidebar-setting-link {
+            margin-left: auto;
+            margin-right: auto;
             justify-content: center;
-            padding-left: 0;
-            padding-right: 0;
+          }
+          .app-layout #sidebar-toggle:not(:checked) ~ .app-sidebar .sidebar-footer {
+            display: flex;
+            justify-content: center;
+          }
+          .app-layout #sidebar-toggle:not(:checked) ~ .app-sidebar .sidebar-toggle-row {
+            justify-content: center;
           }
           .sidebar-notes {
             flex: 1;
@@ -157,7 +174,7 @@ const HtmlPage = ({
           .sidebar-footer {
             margin-top: auto;
             border-top: 1px solid rgb(226 232 240);
-            padding: 0.75rem 0.75rem 0.75rem;
+            padding: 0.75rem;
           }
           .app-layout #sidebar-toggle:not(:checked) ~ .app-main {
             margin-left: 3.5rem;
@@ -168,13 +185,13 @@ const HtmlPage = ({
         <div className="app-layout">
           <input id="sidebar-toggle" className="sr-only" type="checkbox" defaultChecked />
           <aside className="app-sidebar">
-            <div className="flex h-12 items-center justify-end px-3 text-xs font-semibold uppercase text-slate-500">
+            <div className="sidebar-toggle-row flex h-12 items-center justify-end text-xs font-semibold uppercase text-slate-500">
               <label
                 htmlFor="sidebar-toggle"
-                className="cursor-pointer rounded px-2 py-1 hover:bg-slate-200/60"
+                className="sidebar-toggle-button cursor-pointer rounded hover:bg-slate-200/60"
                 aria-label="Toggle sidebar"
               >
-                ≡
+                <FaInbox size={21} aria-hidden="true" />
               </label>
             </div>
             <div className="app-sidebar-content">
