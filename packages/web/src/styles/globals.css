@@ -27,6 +27,16 @@
     @apply max-w-full overflow-x-auto bg-slate-50;
   }
 
+  .prose-ui .code-block-body,
+  .prose-ui .code-group .code-block-body {
+    @apply min-w-0 max-w-full;
+  }
+
+  .prose-ui .code-block .code-container,
+  .prose-ui .code-group .code-container {
+    @apply min-w-0 max-w-full overflow-x-auto;
+  }
+
   .prose-ui pre.shiki {
     background-color: rgb(248 250 252) !important;
   }
