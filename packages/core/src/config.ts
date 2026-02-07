@@ -15,26 +15,26 @@ import {
 } from "valibot";
 import { parse as parseYaml } from "yaml";
 
-const NOTE_DIRECTORY_SCHEMA = pipe(string(), minLength(1));
+const NoteDirectorySchema = pipe(string(), minLength(1));
 
-const ZETTELKASTEN_DIRECTORY_MAPPING_SCHEMA = object({
-  fleeting: NOTE_DIRECTORY_SCHEMA,
-  literature: NOTE_DIRECTORY_SCHEMA,
-  permanent: NOTE_DIRECTORY_SCHEMA,
-  structure: NOTE_DIRECTORY_SCHEMA,
-  index: NOTE_DIRECTORY_SCHEMA,
+const ZettelkastenDirectoryMappingSchema = object({
+  fleeting: NoteDirectorySchema,
+  literature: NoteDirectorySchema,
+  permanent: NoteDirectorySchema,
+  structure: NoteDirectorySchema,
+  index: NoteDirectorySchema,
 });
 
-const RAW_HAKO_CONFIG_SCHEMA = object({
-  notesDir: optional(NOTE_DIRECTORY_SCHEMA),
+const RawHakoConfigSchema = object({
+  notesDir: optional(NoteDirectorySchema),
   zettelkasten: optional(
     object({
-      directories: optional(ZETTELKASTEN_DIRECTORY_MAPPING_SCHEMA),
+      directories: optional(ZettelkastenDirectoryMappingSchema),
     }),
   ),
 });
 
-type RawHakoConfig = InferOutput<typeof RAW_HAKO_CONFIG_SCHEMA>;
+type RawHakoConfig = InferOutput<typeof RawHakoConfigSchema>;
 
 const DEFAULT_NOTES_DIR = "~/zettelkasten";
 
@@ -172,13 +172,13 @@ export const loadHakoConfig = async (options: LoadHakoConfigOptions = {}): Promi
   const resolvedPath = await pickConfigPath(candidatePaths);
 
   if (!resolvedPath) {
-    return buildConfig(parse(RAW_HAKO_CONFIG_SCHEMA, {}), null);
+    return buildConfig(parse(RawHakoConfigSchema, {}), null);
   }
 
   try {
     const source = await readFile(resolvedPath, "utf-8");
     const parsed = parseConfigText(resolvedPath, source);
-    const validated = parse(RAW_HAKO_CONFIG_SCHEMA, parsed);
+    const validated = parse(RawHakoConfigSchema, parsed);
     return buildConfig(validated, resolvedPath);
   } catch (error) {
     if (error instanceof ValiError) {
