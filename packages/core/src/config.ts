@@ -36,7 +36,7 @@ const RawHakoConfigSchema = object({
 
 type RawHakoConfig = InferOutput<typeof RawHakoConfigSchema>;
 
-const DEFAULT_NOTES_DIR = "~/zettelkasten";
+const DEFAULT_NOTES_DIR = "~/hako";
 
 export const DEFAULT_ZETTELKASTEN_DIRECTORIES = {
   fleeting: "fleeting",

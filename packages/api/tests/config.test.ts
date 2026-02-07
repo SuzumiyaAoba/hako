@@ -26,7 +26,7 @@ describe("hako config", () => {
       const config = await loadHakoConfig();
 
       expect(config.sourcePath).toBeNull();
-      expect(config.notesDir.endsWith("zettelkasten")).toBe(true);
+      expect(config.notesDir.endsWith("hako")).toBe(true);
       expect(config.zettelkasten.directories).toEqual({
         fleeting: "fleeting",
         literature: "literature",
