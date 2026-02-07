@@ -35,7 +35,7 @@ if (isDev) {
 
 serve({
   port,
-  fetch: app.fetch,
+  fetch: (request) => app.handle(request),
 });
 
 console.log(`@hako/web listening on http://localhost:${port}`);

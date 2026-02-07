@@ -46,7 +46,17 @@ const mockMarkdownHtml = (content: string): string => {
 };
 
 if (!globalThis.Bun) {
-  (globalThis as { Bun?: { markdown: { html: (value: string) => string } } }).Bun = {
+  (
+    globalThis as {
+      Bun?: {
+        env: Record<string, string | undefined>;
+        gc: (force?: boolean) => void;
+        markdown: { html: (value: string) => string };
+      };
+    }
+  ).Bun = {
+    env: process.env,
+    gc: () => undefined,
     markdown: {
       html: mockMarkdownHtml,
     },

@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 import React from "react";
 import { IoDocumentTextOutline, IoFileTrayFullOutline } from "react-icons/io5";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -323,34 +323,61 @@ const renderPage = (
     </HtmlPage>,
   )}`;
 
-const app = new Hono();
+const app = new Elysia();
 
 const stylesPath = new URL("./styles/tailwind.css", import.meta.url);
 const isDev = process.env["NODE_ENV"] !== "production";
 let cachedStyles: string | null = null;
 
-app.get("/styles.css", async (c) => {
+const htmlResponse = (html: string, status = 200): Response =>
+  new Response(html, {
+    status,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+    },
+  });
+
+app.get("/styles.css", async () => {
   if (isDev) {
     const styles = await Bun.file(stylesPath).text();
-    return c.text(styles, 200, { "content-type": "text/css" });
+    return new Response(styles, {
+      headers: {
+        "content-type": "text/css",
+      },
+    });
   }
   if (!cachedStyles) {
     cachedStyles = await Bun.file(stylesPath).text();
   }
-  return c.text(cachedStyles, 200, { "content-type": "text/css" });
+  return new Response(cachedStyles, {
+    headers: {
+      "content-type": "text/css",
+    },
+  });
 });
 
-app.get("/", (c) => c.redirect("/notes"));
+app.get(
+  "/",
+  () =>
+    new Response(null, {
+      status: 302,
+      headers: {
+        location: "/notes",
+      },
+    }),
+);
 
-app.get("/notes", async (c) => {
+app.get("/notes", async ({ request }) => {
+  const url = new URL(request.url);
   const notes = await getNotes();
-  const query = resolveQuery(c.req.query("q"));
+  const queryParam = url.searchParams.get("q") ?? "";
+  const query = resolveQuery(queryParam);
   const filtered = query ? notes.filter((note) => note.title.toLowerCase().includes(query)) : notes;
 
-  return c.html(
+  return htmlResponse(
     renderPage(
       "ノート一覧",
-      c.req.path,
+      url.pathname,
       <section className="space-y-4 text-pretty">
         <p className="text-sm text-slate-500">
           {filtered.length} 件 / {notes.length} 件
@@ -383,19 +410,20 @@ app.get("/notes", async (c) => {
         )}
       </section>,
       filtered,
-      c.req.query("q") ?? "",
+      queryParam,
     ),
   );
 });
 
-app.get("/notes/:id", async (c) => {
-  const validated = parse(NoteIdSchema, c.req.param("id"));
+app.get("/notes/:id", async ({ request, params }) => {
+  const url = new URL(request.url);
+  const validated = parse(NoteIdSchema, params.id);
   const note = await getNote(validated);
   if (!note) {
-    return c.html(
+    return htmlResponse(
       renderPage(
         "ノートが見つかりません",
-        c.req.path,
+        url.pathname,
         <section className="space-y-2">
           <h1 className="text-balance text-xl font-semibold text-slate-900">
             ノートが見つかりません
@@ -411,7 +439,8 @@ app.get("/notes/:id", async (c) => {
   const backlinks = buildBacklinks(notes, note.title);
   const { frontmatter, body } = extractFrontmatter(note.content ?? "");
   const markdown = body.trim();
-  const rawMode = c.req.query("raw") === "1";
+  const queryParam = url.searchParams.get("q") ?? "";
+  const rawMode = url.searchParams.get("raw") === "1";
   const rendered = markdown
     ? await renderMarkdown(markdown, (title, label) => {
         const target = titleMap.get(title);
@@ -421,10 +450,10 @@ app.get("/notes/:id", async (c) => {
 
   const rawHref = rawMode ? `/notes/${note.id}` : `/notes/${note.id}?raw=1`;
 
-  return c.html(
+  return htmlResponse(
     renderPage(
       note.title,
-      c.req.path,
+      url.pathname,
       <section className="text-pretty">
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]">
           <div className="min-w-0 space-y-6">
@@ -486,18 +515,19 @@ app.get("/notes/:id", async (c) => {
         </div>
       </section>,
       notes,
-      c.req.query("q") ?? "",
+      queryParam,
     ),
   );
 });
 
-app.get("/graph", async (c) => {
+app.get("/graph", async ({ request }) => {
+  const url = new URL(request.url);
   const notes = await getNotes();
   const graph = buildNoteGraph(notes);
-  return c.html(
+  return htmlResponse(
     renderPage(
       "ノートグラフ",
-      c.req.path,
+      url.pathname,
       <section className="space-y-6 text-pretty">
         <h1 className="text-balance text-2xl font-semibold text-slate-900">ノートグラフ</h1>
         {graph.nodes.length === 0 ? (

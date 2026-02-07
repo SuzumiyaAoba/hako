@@ -3,19 +3,15 @@ import { readFile, stat } from "node:fs/promises";
 import { basename, extname } from "node:path";
 
 import { eq } from "drizzle-orm";
-import { Hono } from "hono";
-import { describeRoute, resolver, validator } from "hono-openapi";
-import { array, minLength, number, object, pipe, string, union } from "valibot";
+import { Elysia } from "elysia";
+import { array, minLength, number, object, pipe, safeParse, string, union } from "valibot";
 
-import { extractWikiLinks, NoteIdSchema, NoteSchema, NotesSchema, type Note } from "@hako/core";
+import { extractWikiLinks, NoteIdSchema, type Note } from "@hako/core";
 
 import type { DbClient } from "../db/queries";
 import { getNoteById, listNotes } from "../db/queries";
 import * as schema from "../db/schema";
 
-/**
- * Response schema for link reindexing.
- */
 const reindexResponseSchema = object({
   startedAt: string(),
   finishedAt: string(),
@@ -26,6 +22,8 @@ const reindexResponseSchema = object({
   linksInserted: number(),
   linksDeleted: number(),
 });
+
+void reindexResponseSchema;
 
 type ReindexStats = {
   notesIndexed: number;
@@ -38,9 +36,6 @@ type LinkInsert = typeof schema.links.$inferInsert;
 
 type NoteLinkStateInsert = typeof schema.noteLinkStates.$inferInsert;
 
-/**
- * Response schema for note import.
- */
 const importResponseSchema = object({
   startedAt: string(),
   finishedAt: string(),
@@ -59,6 +54,8 @@ const importResponseSchema = object({
   ),
 });
 
+void importResponseSchema;
+
 type ImportStatus = "created" | "updated" | "skipped";
 
 type ImportNoteResult = {
@@ -74,23 +71,14 @@ type ImportStats = {
   skipped: number;
 };
 
-/**
- * Derives a note title from a file path.
- */
 const deriveTitleFromPath = (path: string): string => {
   const filename = basename(path);
   const extension = extname(filename);
   return extension.length > 0 ? filename.slice(0, -extension.length) : filename;
 };
 
-/**
- * Computes a stable identifier for a note path.
- */
 const computeNoteId = (path: string): string => createHash("sha256").update(path).digest("hex");
 
-/**
- * Computes a lightweight fingerprint without reading file contents.
- */
 const computeSourceFingerprint = async (path: string): Promise<string> => {
   try {
     const stats = await stat(path);
@@ -100,15 +88,10 @@ const computeSourceFingerprint = async (path: string): Promise<string> => {
     return createHash("sha256").update(path).digest("hex");
   }
 };
-/**
- * Builds a lookup table keyed by note title.
- */
+
 const buildTitleMap = (notes: ReadonlyArray<Note>): Map<string, Note> =>
   new Map(notes.map((note) => [note.title, note]));
 
-/**
- * Builds link insert rows for a single note.
- */
 const buildLinkInserts = (
   note: Note,
   titleMap: Map<string, Note>,
@@ -133,18 +116,14 @@ const buildLinkInserts = (
   return { links, total: links.length };
 };
 
-/**
- * Notes-related routes.
- */
-export const createNotesRoutes = (db: DbClient) => {
-  const routes = new Hono();
-
-  const noteIdParamSchema = object({
-    id: NoteIdSchema,
+const json = (body: unknown, status = 200): Response =>
+  Response.json(body, {
+    status,
   });
 
-  const errorSchema = object({
-    message: pipe(string(), minLength(1)),
+export const createNotesRoutes = (db: DbClient) => {
+  const noteIdParamSchema = object({
+    id: NoteIdSchema,
   });
 
   const importNoteSchema = object({
@@ -161,102 +140,39 @@ export const createNotesRoutes = (db: DbClient) => {
     }),
   ]);
 
-  routes.get(
-    "/notes",
-    describeRoute({
-      responses: {
-        200: {
-          description: "List notes",
-          content: {
-            "application/json": {
-              schema: resolver(NotesSchema),
-            },
-          },
-        },
-      },
-    }),
-    (c) => c.json(listNotes(db)),
-  );
-
-  routes.get(
-    "/notes/:id",
-    describeRoute({
-      responses: {
-        200: {
-          description: "Get note by id",
-          content: {
-            "application/json": {
-              schema: resolver(NoteSchema),
-            },
-          },
-        },
-        400: {
-          description: "Invalid note id",
-          content: {
-            "application/json": {
-              schema: resolver(errorSchema),
-            },
-          },
-        },
-        404: {
-          description: "Note not found",
-          content: {
-            "application/json": {
-              schema: resolver(errorSchema),
-            },
-          },
-        },
-      },
-    }),
-    validator("param", noteIdParamSchema, (result, c): Response | void => {
-      if (!result.success) {
-        return c.json({ message: "Invalid note id" }, 400);
+  return new Elysia()
+    .get("/notes", () => listNotes(db))
+    .get("/notes/:id", async ({ params }) => {
+      const parsedParams = safeParse(noteIdParamSchema, params);
+      if (!parsedParams.success) {
+        return json({ message: "Invalid note id" }, 400);
       }
-      return undefined;
-    }),
-    async (c) => {
-      const { id } = c.req.valid("param");
-      const note = getNoteById(db, id);
 
+      const note = getNoteById(db, parsedParams.output.id);
       if (!note) {
-        return c.json({ message: "Note not found" }, 404);
+        return json({ message: "Note not found" }, 404);
       }
 
       try {
         const content = await readFile(note.path, "utf-8");
-        return c.json({ ...note, content });
+        return json({ ...note, content });
       } catch {
-        return c.json({ message: "Note file not found" }, 404);
+        return json({ message: "Note file not found" }, 404);
       }
-    },
-  );
+    })
+    .post("/notes/import", async ({ body }) => {
+      const parsedBody = safeParse(importBodySchema, body);
+      if (!parsedBody.success) {
+        return json({ message: "Invalid request body" }, 400);
+      }
 
-  routes.post(
-    "/notes/import",
-    describeRoute({
-      responses: {
-        200: {
-          description: "Import note paths",
-          content: {
-            "application/json": {
-              schema: resolver(importResponseSchema),
-            },
-          },
-        },
-      },
-    }),
-    validator("json", importBodySchema, (result, c): Response | void => {
-      if (!result.success) {
-        return c.json({ message: "Invalid request body" }, 400);
-      }
-      return undefined;
-    }),
-    async (c) => {
       const startedAt = new Date();
       const startedAtMs = startedAt.getTime();
-      const body = c.req.valid("json");
+      const requestBody = parsedBody.output;
       const notesInput =
-        "notes" in body ? body.notes : body.paths.map((path) => ({ path, title: "" }));
+        "notes" in requestBody
+          ? requestBody.notes
+          : requestBody.paths.map((path) => ({ path, title: "" }));
       const paths = notesInput.map((note) => note.path);
 
       const results: ImportNoteResult[] = [];
@@ -329,7 +245,7 @@ export const createNotesRoutes = (db: DbClient) => {
       const finishedAt = new Date();
       const durationMs = finishedAt.getTime() - startedAtMs;
 
-      return c.json({
+      return json({
         startedAt: startedAt.toISOString(),
         finishedAt: finishedAt.toISOString(),
         durationMs,
@@ -339,24 +255,8 @@ export const createNotesRoutes = (db: DbClient) => {
         skipped: stats.skipped,
         notes: results,
       });
-    },
-  );
-
-  routes.post(
-    "/notes/reindex",
-    describeRoute({
-      responses: {
-        200: {
-          description: "Reindex note links",
-          content: {
-            "application/json": {
-              schema: resolver(reindexResponseSchema),
-            },
-          },
-        },
-      },
-    }),
-    (c) => {
+    })
+    .post("/notes/reindex", () => {
       const startedAt = new Date();
       const startedAtMs = startedAt.getTime();
       const notes = listNotes(db);
@@ -419,7 +319,7 @@ export const createNotesRoutes = (db: DbClient) => {
       const finishedAt = new Date();
       const durationMs = finishedAt.getTime() - startedAtMs;
 
-      return c.json({
+      return json({
         startedAt: startedAt.toISOString(),
         finishedAt: finishedAt.toISOString(),
         durationMs,
@@ -429,8 +329,5 @@ export const createNotesRoutes = (db: DbClient) => {
         linksInserted: stats.linksInserted,
         linksDeleted: stats.linksDeleted,
       });
-    },
-  );
-
-  return routes;
+    });
 };

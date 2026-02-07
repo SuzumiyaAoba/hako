@@ -1,30 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { Hono } from "hono";
-import { openAPIRouteHandler } from "hono-openapi";
+import { Elysia } from "elysia";
+
 import { createTestDb } from "./helpers/create-test-db";
+import { createOpenApiDocument } from "../src/openapi";
 import { createNotesRoutes } from "../src/routes/notes";
 
 describe("openapi", () => {
   it("includes notes routes", async () => {
     const db = await createTestDb();
-    const routes = new Hono();
-    routes.route("/", createNotesRoutes(db));
+    const app = new Elysia()
+      .use(createNotesRoutes(db))
+      .get("/openapi.json", () => createOpenApiDocument());
 
-    const app = new Hono();
-    app.route("/", routes);
-    app.get(
-      "/openapi.json",
-      openAPIRouteHandler(routes, {
-        documentation: {
-          info: {
-            title: "Hako API",
-            version: "0.0.0",
-          },
-        },
-      }),
-    );
-
-    const response = await app.request("http://localhost/openapi.json");
+    const response = await app.handle(new Request("http://localhost/openapi.json"));
     const body = await response.json();
 
     const paths = Object.keys(body.paths ?? {});
