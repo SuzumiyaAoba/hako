@@ -24,7 +24,7 @@
   }
 
   .prose-ui pre {
-    @apply bg-slate-50;
+    @apply max-w-full overflow-x-auto bg-slate-50;
   }
 
   .prose-ui pre.shiki {
