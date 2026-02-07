@@ -9,6 +9,7 @@ import { createNotesRoutes } from "./routes/notes";
 
 const require = createRequire(import.meta.url);
 const nodeAdapter = require("@elysiajs/node") as { node: () => unknown };
+// TODO: Wire appConfig.notesDir/noteDirectories into note discovery and import flows.
 const appConfig = await loadHakoConfig();
 
 const app = new Elysia({ adapter: nodeAdapter.node() as any })
@@ -27,4 +28,5 @@ if (appConfig.sourcePath) {
   console.log("Hako config loaded with defaults");
 }
 
+export { appConfig };
 export default app;

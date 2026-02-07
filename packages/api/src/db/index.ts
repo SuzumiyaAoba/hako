@@ -19,7 +19,23 @@ const toLocalFilePath = (databaseUrl: string): string | null => {
     return null;
   }
 
-  return withoutScheme.startsWith("//") ? withoutScheme.slice(2) : withoutScheme;
+  if (!withoutScheme.startsWith("//")) {
+    return withoutScheme;
+  }
+
+  const authorityForm = withoutScheme.slice(2);
+  const slashIndex = authorityForm.indexOf("/");
+  const host = slashIndex === -1 ? authorityForm : authorityForm.slice(0, slashIndex);
+  const pathPart = slashIndex === -1 ? "" : authorityForm.slice(slashIndex);
+
+  if (!host || host === "localhost") {
+    if (!pathPart || pathPart === "/") {
+      return "/";
+    }
+    return pathPart.startsWith("/") ? pathPart : `/${pathPart}`;
+  }
+
+  return null;
 };
 
 const ensureDatabaseDir = (databaseUrl: string): void => {
@@ -98,5 +114,6 @@ const client = createClient({
 
 const db = drizzle(client, { schema });
 const dbReady = initializeSchema(client);
+dbReady.catch(() => undefined);
 
 export { client, db, dbReady };

@@ -175,9 +175,8 @@ export const loadHakoConfig = async (options: LoadHakoConfigOptions = {}): Promi
     return buildConfig(parse(RAW_HAKO_CONFIG_SCHEMA, {}), null);
   }
 
-  const source = await readFile(resolvedPath, "utf-8");
-
   try {
+    const source = await readFile(resolvedPath, "utf-8");
     const parsed = parseConfigText(resolvedPath, source);
     const validated = parse(RAW_HAKO_CONFIG_SCHEMA, parsed);
     return buildConfig(validated, resolvedPath);
