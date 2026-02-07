@@ -141,14 +141,14 @@ export const createNotesRoutes = (db: DbClient) => {
   ]);
 
   return new Elysia()
-    .get("/notes", () => listNotes(db))
+    .get("/notes", async () => await listNotes(db))
     .get("/notes/:id", async ({ params }) => {
       const parsedParams = safeParse(noteIdParamSchema, params);
       if (!parsedParams.success) {
         return json({ message: "Invalid note id" }, 400);
       }
 
-      const note = getNoteById(db, parsedParams.output.id);
+      const note = await getNoteById(db, parsedParams.output.id);
       if (!note) {
         return json({ message: "Note not found" }, 404);
       }
@@ -184,18 +184,23 @@ export const createNotesRoutes = (db: DbClient) => {
         })),
       );
 
-      const stats = db.transaction((tx): ImportStats => {
+      const stats = await db.transaction(async (tx): Promise<ImportStats> => {
         let created = 0;
         let updated = 0;
         let skipped = 0;
 
         for (const entry of imports) {
           const { path, title, sourceHash } = entry;
-          const existing = tx.select().from(schema.notes).where(eq(schema.notes.path, path)).get();
+          const existing = await tx
+            .select()
+            .from(schema.notes)
+            .where(eq(schema.notes.path, path))
+            .get();
 
           if (!existing) {
             const id = computeNoteId(path);
-            tx.insert(schema.notes)
+            await tx
+              .insert(schema.notes)
               .values({
                 id,
                 title,
@@ -226,7 +231,8 @@ export const createNotesRoutes = (db: DbClient) => {
             continue;
           }
 
-          tx.update(schema.notes)
+          await tx
+            .update(schema.notes)
             .set({
               title,
               updatedAt: new Date().toISOString(),
@@ -256,16 +262,16 @@ export const createNotesRoutes = (db: DbClient) => {
         notes: results,
       });
     })
-    .post("/notes/reindex", () => {
+    .post("/notes/reindex", async () => {
       const startedAt = new Date();
       const startedAtMs = startedAt.getTime();
-      const notes = listNotes(db);
+      const notes = await listNotes(db);
       const titleMap = buildTitleMap(notes);
-      const existingStates = db.select().from(schema.noteLinkStates).all();
+      const existingStates = await db.select().from(schema.noteLinkStates).all();
       const stateMap = new Map(existingStates.map((state) => [state.noteId, state.contentHash]));
       const indexedAt = new Date().toISOString();
 
-      const stats = db.transaction((tx): ReindexStats => {
+      const stats = await db.transaction(async (tx): Promise<ReindexStats> => {
         let notesIndexed = 0;
         let notesSkipped = 0;
         let linksInserted = 0;
@@ -279,15 +285,15 @@ export const createNotesRoutes = (db: DbClient) => {
           }
 
           notesIndexed += 1;
-          const deleteResult = tx
+          const deleteResult = await tx
             .delete(schema.links)
             .where(eq(schema.links.fromNoteId, note.id))
             .run();
-          linksDeleted += deleteResult.changes ?? 0;
+          linksDeleted += deleteResult.rowsAffected ?? 0;
 
           const { links, total } = buildLinkInserts(note, titleMap);
           if (total > 0) {
-            tx.insert(schema.links).values(links).run();
+            await tx.insert(schema.links).values(links).run();
             linksInserted += total;
           }
 
@@ -296,7 +302,8 @@ export const createNotesRoutes = (db: DbClient) => {
             contentHash: note.contentHash,
             indexedAt,
           };
-          tx.insert(schema.noteLinkStates)
+          await tx
+            .insert(schema.noteLinkStates)
             .values(state)
             .onConflictDoUpdate({
               target: schema.noteLinkStates.noteId,

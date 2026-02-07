@@ -2,7 +2,7 @@ import { createRequire } from "node:module";
 
 import { Elysia } from "elysia";
 
-import { db } from "./db";
+import { db, dbReady } from "./db";
 import { createOpenApiDocument } from "./openapi";
 import { createNotesRoutes } from "./routes/notes";
 
@@ -16,6 +16,7 @@ const app = new Elysia({ adapter: nodeAdapter.node() as any })
 
 const port = Number(process.env["PORT"] ?? 8787);
 
+await dbReady;
 app.listen(port);
 console.log(`Hako API listening on http://localhost:${port}`);
 

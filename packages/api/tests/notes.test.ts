@@ -7,7 +7,8 @@ import { createTestDb } from "./helpers/create-test-db";
 describe("listNotes", () => {
   it("returns stored notes ordered by title", async () => {
     const db = await createTestDb();
-    db.insert(schema.notes)
+    await db
+      .insert(schema.notes)
       .values([
         {
           id: "note-2",
@@ -28,7 +29,7 @@ describe("listNotes", () => {
       ])
       .run();
 
-    const result = listNotes(db);
+    const result = await listNotes(db);
 
     expect(result.map((note) => note.title)).toEqual(["Alpha", "Zeta"]);
   });
@@ -37,7 +38,8 @@ describe("listNotes", () => {
 describe("getNoteById", () => {
   it("returns a note when the id matches", async () => {
     const db = await createTestDb();
-    db.insert(schema.notes)
+    await db
+      .insert(schema.notes)
       .values({
         id: "note-1",
         title: "Alpha",
@@ -48,7 +50,7 @@ describe("getNoteById", () => {
       })
       .run();
 
-    const result = getNoteById(db, "note-1");
+    const result = await getNoteById(db, "note-1");
 
     expect(result?.title).toBe("Alpha");
   });
@@ -56,7 +58,7 @@ describe("getNoteById", () => {
   it("returns undefined when the id is missing", async () => {
     const db = await createTestDb();
 
-    const result = getNoteById(db, "missing");
+    const result = await getNoteById(db, "missing");
 
     expect(result).toBeUndefined();
   });

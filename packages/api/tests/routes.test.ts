@@ -10,7 +10,8 @@ import { createNotesRoutes } from "../src/routes/notes";
 describe("notes routes", () => {
   it("returns notes from /notes", async () => {
     const db = await createTestDb();
-    db.insert(schema.notes)
+    await db
+      .insert(schema.notes)
       .values({
         id: "note-1",
         title: "Alpha",
@@ -57,7 +58,8 @@ describe("notes routes", () => {
     const filePath = "/tmp/hako-note-detail.md";
     await writeFile(filePath, "# Hello\n");
 
-    db.insert(schema.notes)
+    await db
+      .insert(schema.notes)
       .values({
         id: "note-1",
         title: "Hello",
@@ -84,7 +86,8 @@ describe("notes routes", () => {
 
   it("returns 404 when note file is missing", async () => {
     const db = await createTestDb();
-    db.insert(schema.notes)
+    await db
+      .insert(schema.notes)
       .values({
         id: "note-1",
         title: "Missing",
@@ -128,7 +131,7 @@ describe("notes routes", () => {
       status: "created",
     });
 
-    const notes = db.select().from(schema.notes).all();
+    const notes = await db.select().from(schema.notes).all();
     expect(notes).toHaveLength(1);
     expect(notes[0]?.content).toBe("");
     expect(notes[0]?.path).toBe("/tmp/Alpha.md");
@@ -191,7 +194,8 @@ describe("notes routes", () => {
 
   it("updates title on import without overwriting content hash when content exists", async () => {
     const db = await createTestDb();
-    db.insert(schema.notes)
+    await db
+      .insert(schema.notes)
       .values({
         id: "note-1",
         title: "Old",
@@ -222,7 +226,7 @@ describe("notes routes", () => {
       status: "updated",
     });
 
-    const notes = db.select().from(schema.notes).all();
+    const notes = await db.select().from(schema.notes).all();
     expect(notes[0]?.contentHash).toBe("hash-keep");
   });
 
@@ -246,7 +250,8 @@ describe("notes routes", () => {
 
   it("reindexes note links and skips unchanged notes", async () => {
     const db = await createTestDb();
-    db.insert(schema.notes)
+    await db
+      .insert(schema.notes)
       .values([
         {
           id: "note-1",
@@ -281,7 +286,7 @@ describe("notes routes", () => {
     expect(firstBody.notesSkipped).toBe(0);
     expect(firstBody.linksInserted).toBe(1);
 
-    const links = db.select().from(schema.links).all();
+    const links = await db.select().from(schema.links).all();
     expect(links).toHaveLength(1);
     expect(links[0]).toMatchObject({
       fromNoteId: "note-1",
@@ -307,7 +312,8 @@ describe("notes routes", () => {
 
   it("reindexes only changed notes and keeps unresolved links", async () => {
     const db = await createTestDb();
-    db.insert(schema.notes)
+    await db
+      .insert(schema.notes)
       .values([
         {
           id: "note-1",
@@ -328,7 +334,8 @@ describe("notes routes", () => {
       ])
       .run();
 
-    db.insert(schema.noteLinkStates)
+    await db
+      .insert(schema.noteLinkStates)
       .values({
         noteId: "note-1",
         contentHash: "hash-1",
@@ -336,7 +343,8 @@ describe("notes routes", () => {
       })
       .run();
 
-    db.insert(schema.links)
+    await db
+      .insert(schema.links)
       .values({
         fromNoteId: "note-2",
         toNoteId: null,
@@ -362,7 +370,7 @@ describe("notes routes", () => {
     expect(body.linksDeleted).toBe(1);
     expect(body.linksInserted).toBe(1);
 
-    const links = db.select().from(schema.links).all();
+    const links = await db.select().from(schema.links).all();
     expect(links).toHaveLength(1);
     expect(links[0]).toMatchObject({
       fromNoteId: "note-2",
