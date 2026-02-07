@@ -28,5 +28,13 @@ export const createOpenApiDocument = () => ({
         summary: "Reindex note links",
       },
     },
+    "/config": {
+      get: {
+        summary: "Get current config",
+      },
+      put: {
+        summary: "Update current config",
+      },
+    },
   },
 });

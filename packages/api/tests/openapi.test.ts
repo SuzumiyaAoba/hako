@@ -19,6 +19,7 @@ describe("openapi", () => {
     expect(paths).toContain("/notes");
     expect(paths).toContain("/notes/import");
     expect(paths).toContain("/notes/reindex");
+    expect(paths).toContain("/config");
     const hasDetail = paths.some((path) => path === "/notes/{id}" || path === "/notes/:id");
     expect(hasDetail).toBe(true);
   });

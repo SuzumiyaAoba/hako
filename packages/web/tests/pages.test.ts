@@ -13,6 +13,28 @@ const notes = [
   },
 ];
 
+const config = {
+  sourcePath: null,
+  writeTargetPath: "/tmp/hako/config.yaml",
+  notesDir: "/tmp/hako",
+  zettelkasten: {
+    directories: {
+      fleeting: "fleeting",
+      literature: "literature",
+      permanent: "permanent",
+      structure: "structure",
+      index: "index",
+    },
+  },
+  noteDirectories: {
+    fleeting: "/tmp/hako/fleeting",
+    literature: "/tmp/hako/literature",
+    permanent: "/tmp/hako/permanent",
+    structure: "/tmp/hako/structure",
+    index: "/tmp/hako/index",
+  },
+};
+
 const createJsonResponse = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {
     status,
@@ -22,8 +44,14 @@ const createJsonResponse = (body: unknown, status = 200): Response =>
 let originalFetch: typeof fetch | undefined;
 
 const mockFetch = () => {
-  const fetchMock = vi.fn(async (input: string | URL | Request) => {
+  const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const url = input.toString();
+    if (url.endsWith("/config") && init?.method === "PUT") {
+      return createJsonResponse(config);
+    }
+    if (url.endsWith("/config")) {
+      return createJsonResponse(config);
+    }
     if (url.endsWith("/notes")) {
       return createJsonResponse(notes);
     }
@@ -65,5 +93,35 @@ describe("pages smoke", () => {
     const response = await app.handle(new Request("http://localhost/notes/note-1"));
     const html = await response.text();
     expect(html).toContain("Alpha");
+  });
+
+  it("renders settings page", async () => {
+    const response = await app.handle(new Request("http://localhost/settings"));
+    const html = await response.text();
+    expect(html).toContain("設定");
+    expect(html).toContain("Notes Root");
+  });
+
+  it("updates settings from settings page", async () => {
+    const payload = new URLSearchParams({
+      notesDir: "/tmp/next",
+      fleeting: "f",
+      literature: "l",
+      permanent: "p",
+      structure: "s",
+      index: "i",
+    });
+    const response = await app.handle(
+      new Request("http://localhost/settings", {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: payload.toString(),
+      }),
+    );
+    const html = await response.text();
+    expect(response.status).toBe(200);
+    expect(html).toContain("設定を保存しました。");
   });
 });

@@ -1,10 +1,12 @@
 import { Elysia } from "elysia";
 import React from "react";
-import { IoDocumentTextOutline, IoFileTrayFullOutline } from "react-icons/io5";
+import { IoDocumentTextOutline, IoFileTrayFullOutline, IoSettingsOutline } from "react-icons/io5";
 import { renderToStaticMarkup } from "react-dom/server";
 import { parse } from "valibot";
 
 import type { Note } from "@hako/core";
+import { getConfig, updateConfig } from "./entities/config/api/config";
+import type { Config } from "./entities/config/model/types";
 import { getNote, getNotes } from "./entities/note/api/notes";
 import { NoteIdSchema } from "./entities/note/model/types";
 import { cn } from "./lib/utils";
@@ -75,6 +77,97 @@ const parseFrontmatterEntries = (
 const buildTitleMap = (
   notes: ReadonlyArray<Pick<Note, "id" | "title">>,
 ): Map<string, Pick<Note, "id" | "title">> => new Map(notes.map((note) => [note.title, note]));
+
+type SettingsFormValues = {
+  notesDir: string;
+  fleeting: string;
+  literature: string;
+  permanent: string;
+  structure: string;
+  index: string;
+};
+
+type SettingsFieldKey = keyof SettingsFormValues;
+type SettingsFieldErrors = Partial<Record<SettingsFieldKey, string>>;
+
+type SettingsMessage = {
+  type: "success" | "error";
+  text: string;
+};
+
+type FormValue = string | Blob;
+
+type FormDataLike = {
+  get(name: string): FormValue | null;
+};
+
+const SETTINGS_FIELDS: ReadonlyArray<{
+  key: SettingsFieldKey;
+  label: string;
+  description: string;
+}> = [
+  { key: "notesDir", label: "Notes Root", description: "ノートのルートディレクトリ" },
+  { key: "fleeting", label: "Fleeting", description: "一時メモ" },
+  { key: "literature", label: "Literature", description: "文献ノート" },
+  { key: "permanent", label: "Permanent", description: "恒久ノート" },
+  { key: "structure", label: "Structure", description: "構造ノート" },
+  { key: "index", label: "Index", description: "索引ノート" },
+];
+
+const configToFormValues = (config: Config): SettingsFormValues => ({
+  notesDir: config.notesDir,
+  fleeting: config.zettelkasten.directories.fleeting,
+  literature: config.zettelkasten.directories.literature,
+  permanent: config.zettelkasten.directories.permanent,
+  structure: config.zettelkasten.directories.structure,
+  index: config.zettelkasten.directories.index,
+});
+
+const parseFormValue = (formData: FormDataLike, key: SettingsFieldKey): string => {
+  const value = formData.get(key);
+  return typeof value === "string" ? value.trim() : "";
+};
+
+const extractSettingsFormValues = (formData: FormDataLike): SettingsFormValues => ({
+  notesDir: parseFormValue(formData, "notesDir"),
+  fleeting: parseFormValue(formData, "fleeting"),
+  literature: parseFormValue(formData, "literature"),
+  permanent: parseFormValue(formData, "permanent"),
+  structure: parseFormValue(formData, "structure"),
+  index: parseFormValue(formData, "index"),
+});
+
+const validateSettingsFormValues = (values: SettingsFormValues): SettingsFieldErrors => {
+  const errors: SettingsFieldErrors = {};
+  for (const field of SETTINGS_FIELDS) {
+    if (!values[field.key]) {
+      errors[field.key] = "必須です。";
+    }
+  }
+
+  const directoryFields: ReadonlyArray<SettingsFieldKey> = [
+    "fleeting",
+    "literature",
+    "permanent",
+    "structure",
+    "index",
+  ];
+  const seen = new Set<string>();
+  for (const field of directoryFields) {
+    const value = values[field];
+    if (!value) {
+      continue;
+    }
+    if (seen.has(value)) {
+      errors[field] = "重複しない値を指定してください。";
+    }
+    seen.add(value);
+  }
+
+  return errors;
+};
+
+const hasFieldErrors = (errors: SettingsFieldErrors): boolean => Object.keys(errors).length > 0;
 
 const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.Element | null => {
   if (!frontmatter) {
@@ -154,6 +247,89 @@ const MetadataCard = ({ path }: { path: string }): JSX.Element => (
   </details>
 );
 
+const SettingsForm = ({
+  config,
+  values,
+  errors,
+  message,
+}: {
+  config: Config;
+  values: SettingsFormValues;
+  errors?: SettingsFieldErrors;
+  message?: SettingsMessage;
+}): JSX.Element => (
+  <section className="space-y-6 text-pretty">
+    <div className="space-y-3">
+      <h1 className="text-balance text-2xl font-semibold text-slate-900">設定</h1>
+      <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+        <p>
+          読み込み元:{" "}
+          <code className="break-all rounded bg-white px-1.5 py-0.5 text-xs text-slate-900">
+            {config.sourcePath ?? "(未作成 / デフォルト値を使用中)"}
+          </code>
+        </p>
+        <p>
+          保存先:{" "}
+          <code className="break-all rounded bg-white px-1.5 py-0.5 text-xs text-slate-900">
+            {config.writeTargetPath}
+          </code>
+        </p>
+      </div>
+    </div>
+    <form method="post" action="/settings" className="space-y-5">
+      <div className="grid gap-4">
+        {SETTINGS_FIELDS.map((field) => {
+          const value = values[field.key];
+          const error = errors?.[field.key];
+
+          return (
+            <label key={field.key} className="grid gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-slate-900">{field.label}</span>
+                <span className="text-xs text-slate-500">{field.description}</span>
+              </div>
+              <input
+                type="text"
+                name={field.key}
+                defaultValue={value}
+                aria-invalid={error ? "true" : undefined}
+                aria-describedby={error ? `${field.key}-error` : undefined}
+                className={cn(
+                  "h-10 w-full rounded-lg border bg-white px-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300",
+                  error ? "border-rose-400 focus:ring-rose-200" : "border-slate-200",
+                )}
+              />
+              {error ? (
+                <p id={`${field.key}-error`} className="text-xs text-rose-600">
+                  {error}
+                </p>
+              ) : null}
+            </label>
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+        >
+          設定を保存
+        </button>
+        {message ? (
+          <p
+            className={cn(
+              "text-sm",
+              message.type === "success" ? "text-emerald-700" : "text-rose-700",
+            )}
+          >
+            {message.text}
+          </p>
+        ) : null}
+      </div>
+    </form>
+  </section>
+);
+
 const Header = ({
   pathname,
   searchQuery,
@@ -208,6 +384,18 @@ const Header = ({
           aria-current={pathname.startsWith("/graph") ? "page" : undefined}
         >
           Graph
+        </a>
+        <a
+          className={cn(
+            "flex items-center gap-1 text-slate-600 hover:text-slate-900",
+            pathname.startsWith("/settings") &&
+              "font-semibold text-slate-900 underline decoration-slate-300 underline-offset-8",
+          )}
+          href="/settings"
+          aria-current={pathname.startsWith("/settings") ? "page" : undefined}
+        >
+          <IoSettingsOutline size={14} aria-hidden="true" />
+          Settings
         </a>
       </nav>
     </div>
@@ -558,6 +746,88 @@ app.get("/graph", async ({ request }) => {
       notes,
     ),
   );
+});
+
+app.get("/settings", async ({ request }) => {
+  const url = new URL(request.url);
+  const [notes, config] = await Promise.all([getNotes(), getConfig()]);
+
+  return htmlResponse(
+    renderPage(
+      "設定",
+      url.pathname,
+      <SettingsForm config={config} values={configToFormValues(config)} />,
+      notes,
+    ),
+  );
+});
+
+app.post("/settings", async ({ request }) => {
+  const url = new URL(request.url);
+  const [notes, currentConfig] = await Promise.all([getNotes(), getConfig()]);
+  const formData = await request.formData();
+  const values = extractSettingsFormValues(formData);
+  const errors = validateSettingsFormValues(values);
+
+  if (hasFieldErrors(errors)) {
+    return htmlResponse(
+      renderPage(
+        "設定",
+        url.pathname,
+        <SettingsForm
+          config={currentConfig}
+          values={values}
+          errors={errors}
+          message={{ type: "error", text: "入力内容を確認してください。" }}
+        />,
+        notes,
+      ),
+      400,
+    );
+  }
+
+  try {
+    const updated = await updateConfig({
+      notesDir: values.notesDir,
+      zettelkasten: {
+        directories: {
+          fleeting: values.fleeting,
+          literature: values.literature,
+          permanent: values.permanent,
+          structure: values.structure,
+          index: values.index,
+        },
+      },
+    });
+
+    return htmlResponse(
+      renderPage(
+        "設定",
+        url.pathname,
+        <SettingsForm
+          config={updated}
+          values={configToFormValues(updated)}
+          message={{ type: "success", text: "設定を保存しました。" }}
+        />,
+        notes,
+      ),
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "設定の保存に失敗しました。";
+    return htmlResponse(
+      renderPage(
+        "設定",
+        url.pathname,
+        <SettingsForm
+          config={currentConfig}
+          values={values}
+          message={{ type: "error", text: message }}
+        />,
+        notes,
+      ),
+      400,
+    );
+  }
 });
 
 export { app };

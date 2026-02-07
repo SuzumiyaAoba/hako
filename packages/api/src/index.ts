@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 
 import { db, dbReady } from "./db";
 import { createOpenApiDocument } from "./openapi";
+import { createConfigRoutes } from "./routes/config";
 import { createNotesRoutes } from "./routes/notes";
 
 /**
@@ -22,6 +23,7 @@ const appConfig = await loadHakoConfigCached();
 const app = new Elysia()
   .get("/", () => "Hako API")
   .use(createNotesRoutes(db))
+  .use(createConfigRoutes())
   .get("/openapi.json", () => createOpenApiDocument());
 
 /**
