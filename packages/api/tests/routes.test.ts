@@ -230,7 +230,7 @@ describe("notes routes", () => {
     expect(notes[0]?.contentHash).toBe("hash-keep");
   });
 
-  it("returns 400 for invalid import body", async () => {
+  it("returns 422 for invalid import body", async () => {
     const db = await createTestDb();
     const app = new Elysia();
     app.use(createNotesRoutes(db));
@@ -243,9 +243,12 @@ describe("notes routes", () => {
       }),
     );
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body).toEqual({ message: "Invalid request body" });
+    expect(body).toMatchObject({
+      type: "validation",
+      on: "body",
+    });
   });
 
   it("reindexes note links and skips unchanged notes", async () => {

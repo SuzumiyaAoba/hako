@@ -1,5 +1,3 @@
-import { createRequire } from "node:module";
-
 import { loadHakoConfigCached } from "@hako/core/config";
 import { Elysia } from "elysia";
 
@@ -13,16 +11,6 @@ import { createNotesRoutes } from "./routes/notes";
 const DEFAULT_PORT = 8787;
 
 /**
- * Node-style require function for CommonJS interop packages.
- */
-const require = createRequire(import.meta.url);
-
-/**
- * Elysia node adapter module loaded via CommonJS interop.
- */
-const nodeAdapter = require("@elysiajs/node") as { node: () => unknown };
-
-/**
  * Loaded application configuration.
  * @todo Wire appConfig.notesDir/noteDirectories into note discovery and import flows.
  */
@@ -31,7 +19,7 @@ const appConfig = await loadHakoConfigCached();
 /**
  * API application instance.
  */
-const app = new Elysia({ adapter: nodeAdapter.node() as any })
+const app = new Elysia()
   .get("/", () => "Hako API")
   .use(createNotesRoutes(db))
   .get("/openapi.json", () => createOpenApiDocument());
