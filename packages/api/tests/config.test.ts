@@ -6,9 +6,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   clearHakoConfigCache,
+  getDefaultHakoConfigPath,
   loadHakoConfig,
   loadHakoConfigCached,
   reloadHakoConfig,
+  saveHakoConfig,
 } from "@hako/core/config";
 
 describe("hako config", () => {
@@ -120,5 +122,44 @@ describe("hako config", () => {
     await expect(loadHakoConfig({ configPath })).rejects.toThrow(
       "Unsupported config file extension",
     );
+  });
+
+  it("saves config to default path when file does not exist", async () => {
+    const configRoot = await mkdtemp(join(tmpdir(), "hako-config-save-default-"));
+    const originalXdg = process.env["XDG_CONFIG_HOME"];
+
+    try {
+      process.env["XDG_CONFIG_HOME"] = configRoot;
+
+      const saved = await saveHakoConfig({
+        notesDir: "./vault",
+        zettelkasten: {
+          directories: {
+            fleeting: "f",
+            literature: "l",
+            permanent: "p",
+            structure: "s",
+            index: "i",
+          },
+        },
+      });
+
+      const expectedPath = getDefaultHakoConfigPath();
+      expect(saved.sourcePath).toBe(expectedPath);
+      expect(saved.notesDir.endsWith("/vault")).toBe(true);
+      expect(saved.zettelkasten.directories).toEqual({
+        fleeting: "f",
+        literature: "l",
+        permanent: "p",
+        structure: "s",
+        index: "i",
+      });
+    } finally {
+      if (originalXdg === undefined) {
+        delete process.env["XDG_CONFIG_HOME"];
+      } else {
+        process.env["XDG_CONFIG_HOME"] = originalXdg;
+      }
+    }
   });
 });

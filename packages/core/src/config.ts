@@ -1,6 +1,6 @@
-import { access, readFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { extname, isAbsolute, join, resolve } from "node:path";
+import { dirname, extname, isAbsolute, join, resolve } from "node:path";
 
 import xdgAppPaths from "xdg-app-paths";
 import {
@@ -13,7 +13,7 @@ import {
   string,
   type InferOutput,
 } from "valibot";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 /**
  * Schema for a non-empty note directory segment.
@@ -114,6 +114,16 @@ type ResolvedConfigSource = {
 };
 
 /**
+ * Writable config payload.
+ */
+export type HakoConfigInput = {
+  notesDir?: string;
+  zettelkasten?: {
+    directories?: Partial<ZettelkastenDirectoryMapping>;
+  };
+};
+
+/**
  * In-process cache keyed by resolved config source.
  */
 const configCache = new Map<string, Promise<HakoConfig>>();
@@ -167,6 +177,11 @@ const resolveDefaultConfigPath = (): string => {
   const xdgPaths = xdgAppPaths({ name: "hako", isolated: true });
   return join(xdgPaths.config(), "config.yaml");
 };
+
+/**
+ * Returns default writable config path.
+ */
+export const getDefaultHakoConfigPath = (): string => resolveDefaultConfigPath();
 
 /**
  * Resolves selected config source by priority.
@@ -262,6 +277,22 @@ const parseConfigText = (path: string, source: string): unknown => {
 const parseRawConfig = (path: string, source: string): RawHakoConfig => {
   const parsed = parseConfigText(path, source);
   return parse(RawHakoConfigSchema, parsed);
+};
+
+/**
+ * Serializes config text by extension.
+ */
+const serializeConfigText = (path: string, source: RawHakoConfig): string => {
+  const extension = extname(path).toLowerCase();
+  if (extension === ".json") {
+    return `${JSON.stringify(source, null, 2)}\n`;
+  }
+
+  if (extension === ".yaml" || extension === ".yml" || extension === "") {
+    return stringifyYaml(source);
+  }
+
+  throw new Error(`Unsupported config file extension "${extension}" at ${path}`);
 };
 
 /**
@@ -378,3 +409,39 @@ export const loadHakoConfigCached = async (
  */
 export const reloadHakoConfig = async (options: LoadHakoConfigOptions = {}): Promise<HakoConfig> =>
   await loadHakoConfigCached({ ...options, reload: true });
+
+/**
+ * Saves config to the selected writable file and returns reloaded runtime config.
+ */
+export const saveHakoConfig = async (
+  input: HakoConfigInput,
+  options: LoadHakoConfigOptions = {},
+): Promise<HakoConfig> => {
+  const existing = await loadHakoConfig(options);
+  const targetPath = existing.sourcePath ?? resolveCandidatePaths(options)[0];
+  if (!targetPath) {
+    throw new Error("Failed to resolve writable config path");
+  }
+
+  const nextRaw = parse(RawHakoConfigSchema, {
+    notesDir: input.notesDir,
+    zettelkasten: input.zettelkasten?.directories
+      ? {
+          directories: {
+            ...input.zettelkasten.directories,
+          },
+        }
+      : undefined,
+  });
+
+  await mkdir(dirname(targetPath), { recursive: true });
+  const serialized = serializeConfigText(targetPath, nextRaw);
+  await writeFile(targetPath, serialized, "utf-8");
+
+  const reloadOptions = existing.sourcePath
+    ? {
+        configPath: existing.sourcePath,
+      }
+    : options;
+  return await reloadHakoConfig(reloadOptions);
+};
