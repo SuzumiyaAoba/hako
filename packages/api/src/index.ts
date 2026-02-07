@@ -8,6 +8,11 @@ import { createOpenApiDocument } from "./openapi";
 import { createNotesRoutes } from "./routes/notes";
 
 /**
+ * Default API listening port.
+ */
+const DEFAULT_PORT = 8787;
+
+/**
  * Node-style require function for CommonJS interop packages.
  */
 const require = createRequire(import.meta.url);
@@ -32,9 +37,27 @@ const app = new Elysia({ adapter: nodeAdapter.node() as any })
   .get("/openapi.json", () => createOpenApiDocument());
 
 /**
+ * Resolves validated API listening port.
+ */
+const resolveListenPort = (): number => {
+  const rawPort = process.env["PORT"]?.trim();
+  if (!rawPort) {
+    return DEFAULT_PORT;
+  }
+
+  const parsed = Number.parseInt(rawPort, 10);
+  if (Number.isInteger(parsed) && parsed > 0 && parsed <= 65535) {
+    return parsed;
+  }
+
+  console.warn(`Invalid PORT value "${rawPort}", falling back to ${DEFAULT_PORT}`);
+  return DEFAULT_PORT;
+};
+
+/**
  * Listening port for API server.
  */
-const port = Number(process.env["PORT"] ?? 8787);
+const port = resolveListenPort();
 
 await dbReady;
 app.listen(port);

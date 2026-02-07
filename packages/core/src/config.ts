@@ -101,6 +101,19 @@ export type LoadHakoConfigCachedOptions = LoadHakoConfigOptions & {
 };
 
 /**
+ * Selected config source kind for path resolution and cache keying.
+ */
+type ConfigSourceKind = "path" | "env" | "default";
+
+/**
+ * Resolved config source context.
+ */
+type ResolvedConfigSource = {
+  kind: ConfigSourceKind;
+  path: string | null;
+};
+
+/**
  * In-process cache keyed by resolved config source.
  */
 const configCache = new Map<string, Promise<HakoConfig>>();
@@ -156,16 +169,29 @@ const resolveDefaultConfigPath = (): string => {
 };
 
 /**
- * Builds ordered candidate config paths.
+ * Resolves selected config source by priority.
  */
-const resolveCandidatePaths = (configPath?: string): string[] => {
-  if (configPath && configPath.trim().length > 0) {
-    return [toResolvedAbsolutePath(configPath)];
+const resolveConfigSource = (options: LoadHakoConfigOptions = {}): ResolvedConfigSource => {
+  const directPath = options.configPath?.trim();
+  if (directPath) {
+    return { kind: "path", path: toResolvedAbsolutePath(directPath) };
   }
 
-  const explicitPath = process.env["HAKO_CONFIG_PATH"]?.trim();
-  if (explicitPath) {
-    return [toResolvedAbsolutePath(explicitPath)];
+  const envPath = process.env["HAKO_CONFIG_PATH"]?.trim();
+  if (envPath) {
+    return { kind: "env", path: toResolvedAbsolutePath(envPath) };
+  }
+
+  return { kind: "default", path: null };
+};
+
+/**
+ * Builds ordered candidate config paths.
+ */
+const resolveCandidatePaths = (options: LoadHakoConfigOptions = {}): string[] => {
+  const source = resolveConfigSource(options);
+  if (source.path) {
+    return [source.path];
   }
 
   const defaultYamlPath = resolveDefaultConfigPath();
@@ -178,14 +204,13 @@ const resolveCandidatePaths = (configPath?: string): string[] => {
  * Builds cache key for given loading options.
  */
 const resolveCacheKey = (options: LoadHakoConfigOptions = {}): string => {
-  const directPath = options.configPath?.trim();
-  if (directPath) {
-    return `path:${toResolvedAbsolutePath(directPath)}`;
+  const source = resolveConfigSource(options);
+  if (source.kind === "path" && source.path) {
+    return `path:${source.path}`;
   }
 
-  const envPath = process.env["HAKO_CONFIG_PATH"]?.trim();
-  if (envPath) {
-    return `env:${toResolvedAbsolutePath(envPath)}`;
+  if (source.kind === "env" && source.path) {
+    return `env:${source.path}`;
   }
 
   return "default";
@@ -224,7 +249,36 @@ const parseConfigText = (path: string, source: string): unknown => {
     return JSON.parse(source);
   }
 
-  return parseYaml(source);
+  if (extension === ".yaml" || extension === ".yml" || extension === "") {
+    return parseYaml(source);
+  }
+
+  throw new Error(`Unsupported config file extension "${extension}" at ${path}`);
+};
+
+/**
+ * Parses and validates raw config object from text.
+ */
+const parseRawConfig = (path: string, source: string): RawHakoConfig => {
+  const parsed = parseConfigText(path, source);
+  return parse(RawHakoConfigSchema, parsed);
+};
+
+/**
+ * Builds default runtime config without file source.
+ */
+const buildDefaultConfig = (): HakoConfig => {
+  const empty = parse(RawHakoConfigSchema, {});
+  return buildConfig(empty, null);
+};
+
+/**
+ * Loads and validates config from a file path.
+ */
+const loadConfigFromPath = async (path: string): Promise<HakoConfig> => {
+  const source = await readFile(path, "utf-8");
+  const validated = parseRawConfig(path, source);
+  return buildConfig(validated, path);
 };
 
 /**
@@ -260,18 +314,15 @@ const buildConfig = (raw: RawHakoConfig, sourcePath: string | null): HakoConfig 
  * Loads config from disk and validates it.
  */
 export const loadHakoConfig = async (options: LoadHakoConfigOptions = {}): Promise<HakoConfig> => {
-  const candidatePaths = resolveCandidatePaths(options.configPath);
+  const candidatePaths = resolveCandidatePaths(options);
   const resolvedPath = await pickConfigPath(candidatePaths);
 
   if (!resolvedPath) {
-    return buildConfig(parse(RawHakoConfigSchema, {}), null);
+    return buildDefaultConfig();
   }
 
   try {
-    const source = await readFile(resolvedPath, "utf-8");
-    const parsed = parseConfigText(resolvedPath, source);
-    const validated = parse(RawHakoConfigSchema, parsed);
-    return buildConfig(validated, resolvedPath);
+    return await loadConfigFromPath(resolvedPath);
   } catch (error) {
     if (error instanceof ValiError) {
       throw new Error(`Invalid config at ${resolvedPath}: ${error.message}`);

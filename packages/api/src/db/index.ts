@@ -88,7 +88,6 @@ const SCHEMA_SQL_STATEMENTS = [
     indexed_at text not null,
     foreign key (note_id) references notes (id) on delete cascade
   )`,
-  "create index if not exists idx_note_link_states_note_id on note_link_states (note_id)",
   `create table if not exists tags (
     id integer primary key autoincrement,
     name text not null unique
@@ -113,6 +112,8 @@ const SCHEMA_SQL_STATEMENTS = [
  * Executes bootstrap schema SQL statements.
  */
 const initializeSchema = async (client: Client): Promise<void> => {
+  await client.execute("PRAGMA foreign_keys = ON");
+
   for (const sql of SCHEMA_SQL_STATEMENTS) {
     await client.execute(sql);
   }

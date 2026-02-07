@@ -110,4 +110,15 @@ describe("hako config", () => {
     const reloaded = await reloadHakoConfig({ configPath });
     expect(reloaded.notesDir.endsWith("/second")).toBe(true);
   });
+
+  it("throws when config extension is unsupported", async () => {
+    const configRoot = await mkdtemp(join(tmpdir(), "hako-config-ext-"));
+    const configPath = join(configRoot, "config.toml");
+
+    await writeFile(configPath, 'notesDir = "./notes"\n', "utf-8");
+
+    await expect(loadHakoConfig({ configPath })).rejects.toThrow(
+      "Unsupported config file extension",
+    );
+  });
 });
