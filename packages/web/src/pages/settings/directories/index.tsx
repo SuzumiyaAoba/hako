@@ -106,79 +106,57 @@ const SettingsForm = ({
 }): JSX.Element => (
   <section className="space-y-6 text-pretty">
     <h1 className="text-balance text-2xl font-semibold text-slate-900">設定</h1>
-    <form
-      method="post"
-      action="/settings/directories"
-      className="grid gap-8"
-      style={{ gridTemplateColumns: "220px minmax(0, 1fr)" }}
-    >
-      <aside className="sticky top-4 self-start">
-        <nav aria-label="settings categories" className="rounded-xl p-4">
-          <ul className="space-y-1">
-            <li>
-              <a
-                href="/settings/directories"
-                className="block rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-900"
-                aria-current="page"
-              >
-                ディレクトリ
-              </a>
-            </li>
-          </ul>
-        </nav>
-      </aside>
-      <div className="space-y-6">
-        <section id="settings-directories" className="space-y-4 rounded-xl p-4">
-          <div className="grid gap-4">
-            {SETTINGS_FIELDS.map((field) => {
-              const value = values[field.key];
-              const error = errors?.[field.key];
+    <form method="post" action="/settings/directories" className="space-y-6">
+      <section id="settings-directories" className="space-y-4 rounded-xl p-4">
+        <div className="grid gap-4">
+          {SETTINGS_FIELDS.map((field) => {
+            const value = values[field.key];
+            const error = errors?.[field.key];
 
-              return (
-                <label key={field.key} className="grid gap-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-slate-900">{field.label}</span>
-                    <span className="text-xs text-slate-500">{field.description}</span>
-                  </div>
-                  <input
-                    type="text"
-                    name={field.key}
-                    defaultValue={value}
-                    aria-invalid={error ? "true" : undefined}
-                    aria-describedby={error ? `${field.key}-error` : undefined}
-                    className={cn(
-                      "h-10 w-full rounded-lg bg-white px-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300",
-                      error ? "bg-rose-50 focus:ring-rose-200" : "",
-                    )}
-                  />
-                  {error ? (
-                    <p id={`${field.key}-error`} className="text-xs text-rose-600">
-                      {error}
-                    </p>
-                  ) : null}
-                </label>
-              );
-            })}
-          </div>
-        </section>
-        <div className="mt-6 flex flex-wrap items-center gap-3 pt-2">
-          <button
-            type="submit"
-            className="inline-flex h-10 items-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            設定を保存
-          </button>
-          {message ? (
-            <p
-              className={cn(
-                "text-sm",
-                message.type === "success" ? "text-emerald-700" : "text-rose-700",
-              )}
-            >
-              {message.text}
-            </p>
-          ) : null}
+            return (
+              <label key={field.key} className="grid gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold text-slate-900">{field.label}</span>
+                  <span className="text-xs text-slate-500">{field.description}</span>
+                </div>
+                <input
+                  type="text"
+                  name={field.key}
+                  defaultValue={value}
+                  aria-invalid={error ? "true" : undefined}
+                  aria-describedby={error ? `${field.key}-error` : undefined}
+                  className={cn(
+                    "h-10 w-full rounded-lg bg-white px-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300",
+                    error ? "bg-rose-50 focus:ring-rose-200" : "",
+                  )}
+                />
+                {error ? (
+                  <p id={`${field.key}-error`} className="text-xs text-rose-600">
+                    {error}
+                  </p>
+                ) : null}
+              </label>
+            );
+          })}
         </div>
+      </section>
+      <div className="mt-6 flex flex-wrap items-center gap-3 pt-2">
+        <button
+          type="submit"
+          className="inline-flex h-10 items-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+        >
+          設定を保存
+        </button>
+        {message ? (
+          <p
+            className={cn(
+              "text-sm",
+              message.type === "success" ? "text-emerald-700" : "text-rose-700",
+            )}
+          >
+            {message.text}
+          </p>
+        ) : null}
       </div>
     </form>
   </section>
