@@ -24,7 +24,22 @@
   }
 
   .prose-ui pre {
-    @apply bg-slate-50;
+    max-width: 100%;
+    overflow-x: auto;
+    background-color: rgb(248 250 252 / 1);
+  }
+
+  .prose-ui .code-block-body,
+  .prose-ui .code-group .code-block-body {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .prose-ui .code-block .code-container,
+  .prose-ui .code-group .code-container {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .prose-ui pre.shiki {
