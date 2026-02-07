@@ -89,6 +89,7 @@ type SettingsFormValues = {
 
 type SettingsFieldKey = keyof SettingsFormValues;
 type SettingsFieldErrors = Partial<Record<SettingsFieldKey, string>>;
+type SettingsSection = "storage" | "zettelkasten";
 
 type SettingsMessage = {
   type: "success" | "error";
@@ -115,16 +116,19 @@ const SETTINGS_FIELDS: ReadonlyArray<{
 ];
 
 const SETTINGS_CATEGORIES: ReadonlyArray<{
+  key: SettingsSection;
   id: string;
   title: string;
   fields: ReadonlyArray<SettingsFieldKey>;
 }> = [
   {
+    key: "storage",
     id: "settings-general",
-    title: "全般",
+    title: "保存場所",
     fields: ["notesDir"],
   },
   {
+    key: "zettelkasten",
     id: "settings-zettelkasten",
     title: "Zettelkasten",
     fields: ["fleeting", "literature", "permanent", "structure", "index"],
@@ -194,6 +198,9 @@ const validateSettingsFormValues = (values: SettingsFormValues): SettingsFieldEr
 };
 
 const hasFieldErrors = (errors: SettingsFieldErrors): boolean => Object.keys(errors).length > 0;
+
+const resolveSettingsSection = (value: string | null | undefined): SettingsSection =>
+  value === "zettelkasten" ? "zettelkasten" : "storage";
 
 const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.Element | null => {
   if (!frontmatter) {
@@ -276,66 +283,90 @@ const MetadataCard = ({ path }: { path: string }): JSX.Element => (
 const SettingsForm = ({
   config,
   values,
+  activeSection,
   errors,
   message,
 }: {
   config: Config;
   values: SettingsFormValues;
+  activeSection: SettingsSection;
   errors?: SettingsFieldErrors;
   message?: SettingsMessage;
-}): JSX.Element => (
-  <section className="space-y-6 text-pretty">
-    <div className="space-y-3">
-      <h1 className="text-balance text-2xl font-semibold text-slate-900">設定</h1>
-      <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-        <p>
-          読み込み元:{" "}
-          <code className="break-all rounded bg-white px-1.5 py-0.5 text-xs text-slate-900">
-            {config.sourcePath ?? "(未作成 / デフォルト値を使用中)"}
-          </code>
-        </p>
-        <p>
-          保存先:{" "}
-          <code className="break-all rounded bg-white px-1.5 py-0.5 text-xs text-slate-900">
-            {config.writeTargetPath}
-          </code>
-        </p>
+}): JSX.Element => {
+  const fallbackCategory: {
+    key: SettingsSection;
+    id: string;
+    title: string;
+    fields: ReadonlyArray<SettingsFieldKey>;
+  } = {
+    key: "storage",
+    id: "settings-general",
+    title: "保存場所",
+    fields: ["notesDir"],
+  };
+  const activeCategory =
+    SETTINGS_CATEGORIES.find((category) => category.key === activeSection) ?? fallbackCategory;
+  const visibleKeys = new Set(activeCategory.fields);
+  const hiddenKeys = SETTINGS_FIELDS.map((field) => field.key).filter(
+    (key) => !visibleKeys.has(key),
+  );
+
+  return (
+    <section className="space-y-6 text-pretty">
+      <div className="space-y-3">
+        <h1 className="text-balance text-2xl font-semibold text-slate-900">設定</h1>
+        <div className="grid gap-2 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
+          <p>
+            読み込み元:{" "}
+            <code className="break-all rounded bg-white/90 px-1.5 py-0.5 text-xs text-slate-900">
+              {config.sourcePath ?? "(未作成 / デフォルト値を使用中)"}
+            </code>
+          </p>
+          <p>
+            保存先:{" "}
+            <code className="break-all rounded bg-white/90 px-1.5 py-0.5 text-xs text-slate-900">
+              {config.writeTargetPath}
+            </code>
+          </p>
+        </div>
       </div>
-    </div>
-    <form
-      method="post"
-      action="/settings"
-      className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)]"
-    >
-      <aside className="lg:sticky lg:top-4 lg:self-start">
-        <nav
-          aria-label="settings categories"
-          className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-        >
-          <ul className="space-y-1">
-            {SETTINGS_CATEGORIES.map((category) => (
-              <li key={category.id}>
-                <a
-                  href={`#${category.id}`}
-                  className="block rounded-md px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white hover:text-slate-900"
-                >
-                  {category.title}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </aside>
-      <div className="space-y-6">
-        {SETTINGS_CATEGORIES.map((category) => (
-          <section
-            key={category.id}
-            id={category.id}
-            className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4"
-          >
-            <h2 className="text-balance text-lg font-semibold text-slate-900">{category.title}</h2>
+      <form
+        method="post"
+        action={`/settings?section=${activeSection}`}
+        className="grid gap-8"
+        style={{ gridTemplateColumns: "220px minmax(0, 1fr)" }}
+      >
+        <input type="hidden" name="section" value={activeSection} />
+        {hiddenKeys.map((key) => (
+          <input key={key} type="hidden" name={key} value={values[key]} />
+        ))}
+        <aside className="sticky top-4 self-start">
+          <nav aria-label="settings categories" className="rounded-xl bg-slate-50 p-4">
+            <p className="mb-2 text-xs font-semibold uppercase text-slate-500">カテゴリ</p>
+            <ul className="space-y-1">
+              {SETTINGS_CATEGORIES.map((category) => (
+                <li key={category.id}>
+                  <a
+                    href={`/settings?section=${category.key}`}
+                    className={cn(
+                      "block rounded-md bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white hover:text-slate-900",
+                      category.key === activeSection ? "bg-white text-slate-900" : "",
+                    )}
+                  >
+                    {category.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </aside>
+        <div className="space-y-6">
+          <section id={activeCategory.id} className="space-y-4 rounded-xl bg-slate-50 p-4">
+            <h2 className="text-balance text-lg font-semibold text-slate-900">
+              {activeCategory.title}
+            </h2>
             <div className="grid gap-4">
-              {category.fields.map((key) => {
+              {activeCategory.fields.map((key) => {
                 const field = getSettingsFieldMeta(key);
                 const value = values[field.key];
                 const error = errors?.[field.key];
@@ -353,8 +384,8 @@ const SettingsForm = ({
                       aria-invalid={error ? "true" : undefined}
                       aria-describedby={error ? `${field.key}-error` : undefined}
                       className={cn(
-                        "h-10 w-full rounded-lg border bg-white px-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300",
-                        error ? "border-rose-400 focus:ring-rose-200" : "border-slate-200",
+                        "h-10 w-full rounded-lg bg-white px-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300",
+                        error ? "bg-rose-50 focus:ring-rose-200" : "",
                       )}
                     />
                     {error ? (
@@ -367,29 +398,29 @@ const SettingsForm = ({
               })}
             </div>
           </section>
-        ))}
-        <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-6">
-          <button
-            type="submit"
-            className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            設定を保存
-          </button>
-          {message ? (
-            <p
-              className={cn(
-                "text-sm",
-                message.type === "success" ? "text-emerald-700" : "text-rose-700",
-              )}
+          <div className="mt-6 flex flex-wrap items-center gap-3 pt-2">
+            <button
+              type="submit"
+              className="inline-flex h-10 items-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800"
             >
-              {message.text}
-            </p>
-          ) : null}
+              設定を保存
+            </button>
+            {message ? (
+              <p
+                className={cn(
+                  "text-sm",
+                  message.type === "success" ? "text-emerald-700" : "text-rose-700",
+                )}
+              >
+                {message.text}
+              </p>
+            ) : null}
+          </div>
         </div>
-      </div>
-    </form>
-  </section>
-);
+      </form>
+    </section>
+  );
+};
 
 const Header = ({
   pathname,
@@ -810,13 +841,14 @@ app.get("/graph", async ({ request }) => {
 
 app.get("/settings", async ({ request }) => {
   const url = new URL(request.url);
+  const section = resolveSettingsSection(url.searchParams.get("section"));
   const config = await getConfig();
 
   return htmlResponse(
     renderPage(
       "設定",
       url.pathname,
-      <SettingsForm config={config} values={configToFormValues(config)} />,
+      <SettingsForm config={config} values={configToFormValues(config)} activeSection={section} />,
     ),
   );
 });
@@ -825,6 +857,10 @@ app.post("/settings", async ({ request }) => {
   const url = new URL(request.url);
   const currentConfig = await getConfig();
   const formData = await request.formData();
+  const rawSection = formData.get("section");
+  const section = resolveSettingsSection(
+    url.searchParams.get("section") ?? (typeof rawSection === "string" ? rawSection : null),
+  );
   const values = extractSettingsFormValues(formData);
   const errors = validateSettingsFormValues(values);
 
@@ -836,6 +872,7 @@ app.post("/settings", async ({ request }) => {
         <SettingsForm
           config={currentConfig}
           values={values}
+          activeSection={section}
           errors={errors}
           message={{ type: "error", text: "入力内容を確認してください。" }}
         />,
@@ -865,6 +902,7 @@ app.post("/settings", async ({ request }) => {
         <SettingsForm
           config={updated}
           values={configToFormValues(updated)}
+          activeSection={section}
           message={{ type: "success", text: "設定を保存しました。" }}
         />,
       ),
@@ -878,6 +916,7 @@ app.post("/settings", async ({ request }) => {
         <SettingsForm
           config={currentConfig}
           values={values}
+          activeSection={section}
           message={{ type: "error", text: message }}
         />,
       ),
