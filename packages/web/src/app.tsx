@@ -83,7 +83,7 @@ const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.E
   const entries = parseFrontmatterEntries(frontmatter);
   if (entries.length === 0) {
     return (
-      <details className="border border-slate-200 bg-white p-4">
+      <details className="border border-slate-200 bg-white p-4" open>
         <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-900">
           <span>Frontmatter</span>
           <span className="border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
@@ -97,7 +97,7 @@ const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.E
     );
   }
   return (
-    <details className="border border-slate-200 bg-white p-4">
+    <details className="border border-slate-200 bg-white p-4" open>
       <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-900">
         <span>Frontmatter</span>
         <span className="border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
@@ -138,7 +138,7 @@ const FrontmatterCard = ({ frontmatter }: { frontmatter: string | null }): JSX.E
 };
 
 const MetadataCard = ({ path }: { path: string }): JSX.Element => (
-  <details className="border border-slate-200 bg-white p-4">
+  <details className="border border-slate-200 bg-white p-4" open>
     <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-900">
       <span>Metadata</span>
       <span className="border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
@@ -425,57 +425,65 @@ app.get("/notes/:id", async (c) => {
     renderPage(
       note.title,
       c.req.path,
-      <section className="space-y-6 text-pretty">
-        <div className="flex items-start justify-between gap-4">
-          <h1 className="text-balance text-2xl font-semibold text-slate-900">{note.title}</h1>
-          <a
-            className="border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            href={rawHref}
-          >
-            {rawMode ? "Preview" : "Raw"}
-          </a>
-        </div>
-        <MetadataCard path={note.path} />
-        <FrontmatterCard frontmatter={frontmatter} />
-        {rendered ? (
-          <article className="w-full max-w-full border border-slate-200 p-4">
-            {rawMode ? (
-              <pre className="whitespace-pre-wrap text-xs text-slate-900">{note.content ?? ""}</pre>
-            ) : (
-              <div className="prose-ui w-full max-w-full">
-                <div dangerouslySetInnerHTML={{ __html: rendered }} />
-              </div>
-            )}
-          </article>
-        ) : (
-          <p className="text-sm text-slate-500">ノートの内容がまだ読み込まれていません。</p>
-        )}
-        <section className="space-y-3">
-          <h2 className="text-balance text-lg font-semibold text-slate-900">バックリンク</h2>
-          {backlinks.length === 0 ? (
-            <p className="text-sm text-slate-500">バックリンクはありません。</p>
-          ) : (
-            <ul className="space-y-2">
-              {backlinks.map((link) => {
-                const target = titleMap.get(link.title);
-                return target ? (
-                  <li key={link.title}>
-                    <a
-                      className="text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4"
-                      href={`/notes/${encodeURIComponent(target.id)}`}
-                    >
-                      {link.label}
-                    </a>
-                  </li>
+      <section className="text-pretty">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]">
+          <div className="min-w-0 space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-balance text-2xl font-semibold text-slate-900">{note.title}</h1>
+              <a
+                className="border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                href={rawHref}
+              >
+                {rawMode ? "Preview" : "Raw"}
+              </a>
+            </div>
+            {rendered ? (
+              <article className="w-full max-w-full border border-slate-200 p-4">
+                {rawMode ? (
+                  <pre className="whitespace-pre-wrap text-xs text-slate-900">
+                    {note.content ?? ""}
+                  </pre>
                 ) : (
-                  <li key={link.title} className="text-sm text-slate-500">
-                    {link.label}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
+                  <div className="prose-ui w-full max-w-full">
+                    <div dangerouslySetInnerHTML={{ __html: rendered }} />
+                  </div>
+                )}
+              </article>
+            ) : (
+              <p className="text-sm text-slate-500">ノートの内容がまだ読み込まれていません。</p>
+            )}
+            <section className="space-y-3">
+              <h2 className="text-balance text-lg font-semibold text-slate-900">バックリンク</h2>
+              {backlinks.length === 0 ? (
+                <p className="text-sm text-slate-500">バックリンクはありません。</p>
+              ) : (
+                <ul className="space-y-2">
+                  {backlinks.map((link) => {
+                    const target = titleMap.get(link.title);
+                    return target ? (
+                      <li key={link.title}>
+                        <a
+                          className="text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4"
+                          href={`/notes/${encodeURIComponent(target.id)}`}
+                        >
+                          {link.label}
+                        </a>
+                      </li>
+                    ) : (
+                      <li key={link.title} className="text-sm text-slate-500">
+                        {link.label}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          </div>
+          <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+            <MetadataCard path={note.path} />
+            <FrontmatterCard frontmatter={frontmatter} />
+          </aside>
+        </div>
       </section>,
       notes,
       c.req.query("q") ?? "",
