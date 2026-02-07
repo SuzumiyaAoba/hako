@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 
-import { loadHakoConfig } from "@hako/core/config";
+import { loadHakoConfigCached } from "@hako/core/config";
 import { Elysia } from "elysia";
 
 import { db, dbReady } from "./db";
@@ -10,7 +10,7 @@ import { createNotesRoutes } from "./routes/notes";
 const require = createRequire(import.meta.url);
 const nodeAdapter = require("@elysiajs/node") as { node: () => unknown };
 // TODO: Wire appConfig.notesDir/noteDirectories into note discovery and import flows.
-const appConfig = await loadHakoConfig();
+const appConfig = await loadHakoConfigCached();
 
 const app = new Elysia({ adapter: nodeAdapter.node() as any })
   .get("/", () => "Hako API")

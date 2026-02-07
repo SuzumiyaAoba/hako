@@ -1,7 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { basename, extname, join, resolve } from "node:path";
 
-import { loadHakoConfig } from "@hako/core/config";
+import { loadHakoConfigCached } from "@hako/core/config";
 
 const DEFAULT_API_BASE_URL = "http://localhost:8787";
 const MARKDOWN_EXTENSIONS = new Set([".md", ".mdx"]);
@@ -171,7 +171,7 @@ const main = async (): Promise<void> => {
   const normalizedArgs = args[0] === "--" ? args.slice(1) : args;
   const [command, targetDir] = normalizedArgs;
   const baseUrl = process.env["HAKO_API_BASE_URL"] ?? DEFAULT_API_BASE_URL;
-  const config = await loadHakoConfig();
+  const config = await loadHakoConfigCached();
 
   if (command === "reindex") {
     await reindexNotes(baseUrl);

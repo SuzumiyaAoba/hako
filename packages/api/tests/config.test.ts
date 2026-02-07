@@ -2,11 +2,20 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import { loadHakoConfig } from "@hako/core/config";
+import {
+  clearHakoConfigCache,
+  loadHakoConfig,
+  loadHakoConfigCached,
+  reloadHakoConfig,
+} from "@hako/core/config";
 
 describe("hako config", () => {
+  beforeEach(() => {
+    clearHakoConfigCache();
+  });
+
   it("loads defaults when config file does not exist", async () => {
     const configRoot = await mkdtemp(join(tmpdir(), "hako-config-default-"));
     const originalXdg = process.env["XDG_CONFIG_HOME"];
@@ -82,5 +91,23 @@ describe("hako config", () => {
     );
 
     await expect(loadHakoConfig({ configPath })).rejects.toThrow("duplicated value");
+  });
+
+  it("returns cached config and supports reload", async () => {
+    const configRoot = await mkdtemp(join(tmpdir(), "hako-config-cache-"));
+    const configPath = join(configRoot, "config.yaml");
+
+    await writeFile(configPath, "notesDir: ./first\n", "utf-8");
+
+    const first = await loadHakoConfigCached({ configPath });
+    expect(first.notesDir.endsWith("/first")).toBe(true);
+
+    await writeFile(configPath, "notesDir: ./second\n", "utf-8");
+
+    const cached = await loadHakoConfigCached({ configPath });
+    expect(cached.notesDir.endsWith("/first")).toBe(true);
+
+    const reloaded = await reloadHakoConfig({ configPath });
+    expect(reloaded.notesDir.endsWith("/second")).toBe(true);
   });
 });

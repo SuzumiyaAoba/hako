@@ -63,6 +63,12 @@ export type LoadHakoConfigOptions = {
   configPath?: string;
 };
 
+export type LoadHakoConfigCachedOptions = LoadHakoConfigOptions & {
+  reload?: boolean;
+};
+
+const configCache = new Map<string, Promise<HakoConfig>>();
+
 const resolveUserPath = (value: string): string => {
   if (value.startsWith("~/")) {
     return join(homedir(), value.slice(2));
@@ -112,6 +118,20 @@ const resolveCandidatePaths = (configPath?: string): string[] => {
   const defaultBasePath = defaultYamlPath.replace(/\.ya?ml$/i, "");
 
   return [defaultYamlPath, `${defaultBasePath}.yml`, `${defaultBasePath}.json`];
+};
+
+const resolveCacheKey = (options: LoadHakoConfigOptions = {}): string => {
+  const directPath = options.configPath?.trim();
+  if (directPath) {
+    return `path:${toResolvedAbsolutePath(directPath)}`;
+  }
+
+  const envPath = process.env["HAKO_CONFIG_PATH"]?.trim();
+  if (envPath) {
+    return `env:${toResolvedAbsolutePath(envPath)}`;
+  }
+
+  return "default";
 };
 
 const pathExists = async (path: string): Promise<boolean> => {
@@ -189,3 +209,40 @@ export const loadHakoConfig = async (options: LoadHakoConfigOptions = {}): Promi
     throw new Error(`Failed to load config at ${resolvedPath}: ${message}`);
   }
 };
+
+export const clearHakoConfigCache = (options?: LoadHakoConfigOptions): void => {
+  if (!options) {
+    configCache.clear();
+    return;
+  }
+
+  const key = resolveCacheKey(options);
+  configCache.delete(key);
+};
+
+export const loadHakoConfigCached = async (
+  options: LoadHakoConfigCachedOptions = {},
+): Promise<HakoConfig> => {
+  const { reload = false, ...loadOptions } = options;
+  const key = resolveCacheKey(loadOptions);
+
+  if (reload) {
+    configCache.delete(key);
+  }
+
+  let pending = configCache.get(key);
+  if (!pending) {
+    pending = loadHakoConfig(loadOptions);
+    configCache.set(key, pending);
+    pending.catch(() => {
+      if (configCache.get(key) === pending) {
+        configCache.delete(key);
+      }
+    });
+  }
+
+  return await pending;
+};
+
+export const reloadHakoConfig = async (options: LoadHakoConfigOptions = {}): Promise<HakoConfig> =>
+  await loadHakoConfigCached({ ...options, reload: true });
