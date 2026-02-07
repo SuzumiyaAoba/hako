@@ -1,6 +1,8 @@
 import { readFile, readdir } from "node:fs/promises";
 import { basename, extname, join, resolve } from "node:path";
 
+import { loadHakoConfig } from "@hako/core/config";
+
 const DEFAULT_API_BASE_URL = "http://localhost:8787";
 const MARKDOWN_EXTENSIONS = new Set([".md", ".mdx"]);
 const EXCLUDED_DIRS = new Set([".git", "node_modules"]);
@@ -54,7 +56,16 @@ const deriveTitleFromPath = (path: string): string => {
  * Collects markdown files under a directory.
  */
 const collectMarkdownFiles = async (root: string): Promise<string[]> => {
-  const entries = await readdir(root, { withFileTypes: true });
+  let entries: Awaited<ReturnType<typeof readdir>>;
+  try {
+    entries = await readdir(root, { withFileTypes: true });
+  } catch (error) {
+    const errno = error as NodeJS.ErrnoException;
+    if (errno.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
   const files: string[] = [];
 
   for (const entry of entries) {
@@ -160,6 +171,7 @@ const main = async (): Promise<void> => {
   const normalizedArgs = args[0] === "--" ? args.slice(1) : args;
   const [command, targetDir] = normalizedArgs;
   const baseUrl = process.env["HAKO_API_BASE_URL"] ?? DEFAULT_API_BASE_URL;
+  const config = await loadHakoConfig();
 
   if (command === "reindex") {
     await reindexNotes(baseUrl);
@@ -167,13 +179,13 @@ const main = async (): Promise<void> => {
   }
 
   if (command === "import") {
-    if (!targetDir) {
-      console.error("Usage: bun run notes -- import <dir>");
-      process.exit(1);
-    }
-
-    const root = resolve(targetDir);
-    const files = await collectMarkdownFiles(root);
+    const roots =
+      targetDir && targetDir.trim().length > 0
+        ? [resolve(targetDir)]
+        : Array.from(new Set(Object.values(config.noteDirectories))).map((path) => resolve(path));
+    const files = (
+      await Promise.all(roots.map(async (root) => await collectMarkdownFiles(root)))
+    ).flat();
 
     if (files.length === 0) {
       console.log("No markdown files found.");
