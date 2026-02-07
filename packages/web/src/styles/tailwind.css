@@ -4572,6 +4572,24 @@ body {
   }
 }
 
+@media (min-width: 1280px) {
+  .xl\:sticky {
+    position: sticky
+  }
+
+  .xl\:top-4 {
+    top: 1rem
+  }
+
+  .xl\:grid-cols-\[minmax\(0\2c 1fr\)_minmax\(280px\2c 320px\)\] {
+    grid-template-columns: minmax(0,1fr) minmax(280px,320px)
+  }
+
+  .xl\:self-start {
+    align-self: flex-start
+  }
+}
+
 .\[\&_tr\:last-child\]\:border-0 tr:last-child {
   border-width: 0px
 }
