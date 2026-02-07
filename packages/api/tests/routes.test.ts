@@ -1,7 +1,7 @@
 import { writeFile, unlink } from "node:fs/promises";
 
 import { describe, expect, it } from "vitest";
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 
 import * as schema from "../src/db/schema";
 import { createTestDb } from "./helpers/create-test-db";
@@ -21,10 +21,10 @@ describe("notes routes", () => {
       })
       .run();
 
-    const app = new Hono();
-    app.route("/", createNotesRoutes(db));
+    const app = new Elysia();
+    app.use(createNotesRoutes(db));
 
-    const response = await app.request("http://localhost/notes");
+    const response = await app.handle(new Request("http://localhost/notes"));
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -42,10 +42,10 @@ describe("notes routes", () => {
 
   it("returns 404 when note is missing", async () => {
     const db = await createTestDb();
-    const app = new Hono();
-    app.route("/", createNotesRoutes(db));
+    const app = new Elysia();
+    app.use(createNotesRoutes(db));
 
-    const response = await app.request("http://localhost/notes/missing");
+    const response = await app.handle(new Request("http://localhost/notes/missing"));
 
     expect(response.status).toBe(404);
     const body = await response.json();
@@ -68,11 +68,11 @@ describe("notes routes", () => {
       })
       .run();
 
-    const app = new Hono();
-    app.route("/", createNotesRoutes(db));
+    const app = new Elysia();
+    app.use(createNotesRoutes(db));
 
     try {
-      const response = await app.request("http://localhost/notes/note-1");
+      const response = await app.handle(new Request("http://localhost/notes/note-1"));
 
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -95,10 +95,10 @@ describe("notes routes", () => {
       })
       .run();
 
-    const app = new Hono();
-    app.route("/", createNotesRoutes(db));
+    const app = new Elysia();
+    app.use(createNotesRoutes(db));
 
-    const response = await app.request("http://localhost/notes/note-1");
+    const response = await app.handle(new Request("http://localhost/notes/note-1"));
 
     expect(response.status).toBe(404);
     const body = await response.json();
@@ -107,14 +107,16 @@ describe("notes routes", () => {
 
   it("imports note paths without storing content", async () => {
     const db = await createTestDb();
-    const app = new Hono();
-    app.route("/", createNotesRoutes(db));
+    const app = new Elysia();
+    app.use(createNotesRoutes(db));
 
-    const response = await app.request("http://localhost/notes/import", {
-      method: "POST",
-      body: JSON.stringify({ notes: [{ path: "/tmp/Alpha.md", title: "From Frontmatter" }] }),
-      headers: { "content-type": "application/json" },
-    });
+    const response = await app.handle(
+      new Request("http://localhost/notes/import", {
+        method: "POST",
+        body: JSON.stringify({ notes: [{ path: "/tmp/Alpha.md", title: "From Frontmatter" }] }),
+        headers: { "content-type": "application/json" },
+      }),
+    );
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -134,14 +136,16 @@ describe("notes routes", () => {
 
   it("imports note paths using fallback titles", async () => {
     const db = await createTestDb();
-    const app = new Hono();
-    app.route("/", createNotesRoutes(db));
+    const app = new Elysia();
+    app.use(createNotesRoutes(db));
 
-    const response = await app.request("http://localhost/notes/import", {
-      method: "POST",
-      body: JSON.stringify({ paths: ["/tmp/Delta.md"] }),
-      headers: { "content-type": "application/json" },
-    });
+    const response = await app.handle(
+      new Request("http://localhost/notes/import", {
+        method: "POST",
+        body: JSON.stringify({ paths: ["/tmp/Delta.md"] }),
+        headers: { "content-type": "application/json" },
+      }),
+    );
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -155,23 +159,27 @@ describe("notes routes", () => {
 
   it("skips import when nothing changes", async () => {
     const db = await createTestDb();
-    const app = new Hono();
-    app.route("/", createNotesRoutes(db));
+    const app = new Elysia();
+    app.use(createNotesRoutes(db));
 
     const payload = { notes: [{ path: "/tmp/Skip.md", title: "Skip" }] };
 
-    const firstResponse = await app.request("http://localhost/notes/import", {
-      method: "POST",
-      body: JSON.stringify(payload),
-      headers: { "content-type": "application/json" },
-    });
+    const firstResponse = await app.handle(
+      new Request("http://localhost/notes/import", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "content-type": "application/json" },
+      }),
+    );
     expect(firstResponse.status).toBe(200);
 
-    const secondResponse = await app.request("http://localhost/notes/import", {
-      method: "POST",
-      body: JSON.stringify(payload),
-      headers: { "content-type": "application/json" },
-    });
+    const secondResponse = await app.handle(
+      new Request("http://localhost/notes/import", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "content-type": "application/json" },
+      }),
+    );
     expect(secondResponse.status).toBe(200);
 
     const secondBody = await secondResponse.json();
@@ -194,14 +202,16 @@ describe("notes routes", () => {
       })
       .run();
 
-    const app = new Hono();
-    app.route("/", createNotesRoutes(db));
+    const app = new Elysia();
+    app.use(createNotesRoutes(db));
 
-    const response = await app.request("http://localhost/notes/import", {
-      method: "POST",
-      body: JSON.stringify({ notes: [{ path: "/tmp/Keep.md", title: "New" }] }),
-      headers: { "content-type": "application/json" },
-    });
+    const response = await app.handle(
+      new Request("http://localhost/notes/import", {
+        method: "POST",
+        body: JSON.stringify({ notes: [{ path: "/tmp/Keep.md", title: "New" }] }),
+        headers: { "content-type": "application/json" },
+      }),
+    );
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -218,14 +228,16 @@ describe("notes routes", () => {
 
   it("returns 400 for invalid import body", async () => {
     const db = await createTestDb();
-    const app = new Hono();
-    app.route("/", createNotesRoutes(db));
+    const app = new Elysia();
+    app.use(createNotesRoutes(db));
 
-    const response = await app.request("http://localhost/notes/import", {
-      method: "POST",
-      body: JSON.stringify({}),
-      headers: { "content-type": "application/json" },
-    });
+    const response = await app.handle(
+      new Request("http://localhost/notes/import", {
+        method: "POST",
+        body: JSON.stringify({}),
+        headers: { "content-type": "application/json" },
+      }),
+    );
 
     expect(response.status).toBe(400);
     const body = await response.json();
@@ -255,10 +267,12 @@ describe("notes routes", () => {
       ])
       .run();
 
-    const app = new Hono();
-    app.route("/", createNotesRoutes(db));
+    const app = new Elysia();
+    app.use(createNotesRoutes(db));
 
-    const firstResponse = await app.request("http://localhost/notes/reindex", { method: "POST" });
+    const firstResponse = await app.handle(
+      new Request("http://localhost/notes/reindex", { method: "POST" }),
+    );
 
     expect(firstResponse.status).toBe(200);
     const firstBody = await firstResponse.json();
@@ -278,7 +292,9 @@ describe("notes routes", () => {
       position: 0,
     });
 
-    const secondResponse = await app.request("http://localhost/notes/reindex", { method: "POST" });
+    const secondResponse = await app.handle(
+      new Request("http://localhost/notes/reindex", { method: "POST" }),
+    );
 
     expect(secondResponse.status).toBe(200);
     const secondBody = await secondResponse.json();
@@ -331,10 +347,12 @@ describe("notes routes", () => {
       })
       .run();
 
-    const app = new Hono();
-    app.route("/", createNotesRoutes(db));
+    const app = new Elysia();
+    app.use(createNotesRoutes(db));
 
-    const response = await app.request("http://localhost/notes/reindex", { method: "POST" });
+    const response = await app.handle(
+      new Request("http://localhost/notes/reindex", { method: "POST" }),
+    );
 
     expect(response.status).toBe(200);
     const body = await response.json();

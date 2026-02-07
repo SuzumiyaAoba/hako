@@ -50,19 +50,19 @@ describe("pages smoke", () => {
   });
 
   it("renders home page", async () => {
-    const response = await app.request("http://localhost/");
+    const response = await app.handle(new Request("http://localhost/"));
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe("/notes");
   });
 
   it("renders notes page", async () => {
-    const response = await app.request("http://localhost/notes?q=Al");
+    const response = await app.handle(new Request("http://localhost/notes?q=Al"));
     const html = await response.text();
     expect(html).toContain("Alpha");
   });
 
   it("renders note detail page", async () => {
-    const response = await app.request("http://localhost/notes/note-1");
+    const response = await app.handle(new Request("http://localhost/notes/note-1"));
     const html = await response.text();
     expect(html).toContain("Alpha");
   });
