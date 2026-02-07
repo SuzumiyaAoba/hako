@@ -60,7 +60,6 @@ export const createNotesListPageRoutes = () =>
           )}
         </section>,
         filtered,
-        queryParam,
       ),
     );
   });

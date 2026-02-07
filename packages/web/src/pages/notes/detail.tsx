@@ -189,7 +189,6 @@ export const createNotesDetailPageRoutes = () =>
     const backlinks = buildBacklinks(notes, note.title);
     const { frontmatter, body } = extractFrontmatter(note.content ?? "");
     const markdown = body.trim();
-    const queryParam = url.searchParams.get("q") ?? "";
     const rawMode = url.searchParams.get("raw") === "1";
     const rendered = markdown
       ? await renderMarkdown(markdown, (title, label) => {
@@ -265,7 +264,6 @@ export const createNotesDetailPageRoutes = () =>
           </div>
         </section>,
         notes,
-        queryParam,
       ),
     );
   });
