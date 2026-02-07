@@ -12,6 +12,9 @@ import type { DbClient } from "../db/queries";
 import { getNoteById, listNotes } from "../db/queries";
 import * as schema from "../db/schema";
 
+/**
+ * Response schema for link reindex endpoint.
+ */
 const reindexResponseSchema = object({
   startedAt: string(),
   finishedAt: string(),
@@ -25,6 +28,9 @@ const reindexResponseSchema = object({
 
 void reindexResponseSchema;
 
+/**
+ * Reindex aggregation stats.
+ */
 type ReindexStats = {
   notesIndexed: number;
   notesSkipped: number;
@@ -32,10 +38,19 @@ type ReindexStats = {
   linksDeleted: number;
 };
 
+/**
+ * Link table insert shape.
+ */
 type LinkInsert = typeof schema.links.$inferInsert;
 
+/**
+ * note_link_states table insert shape.
+ */
 type NoteLinkStateInsert = typeof schema.noteLinkStates.$inferInsert;
 
+/**
+ * Response schema for note import endpoint.
+ */
 const importResponseSchema = object({
   startedAt: string(),
   finishedAt: string(),
@@ -56,8 +71,14 @@ const importResponseSchema = object({
 
 void importResponseSchema;
 
+/**
+ * Per-note import status.
+ */
 type ImportStatus = "created" | "updated" | "skipped";
 
+/**
+ * Import result payload for a single note.
+ */
 type ImportNoteResult = {
   id: string;
   title: string;
@@ -65,20 +86,32 @@ type ImportNoteResult = {
   status: ImportStatus;
 };
 
+/**
+ * Import aggregation stats.
+ */
 type ImportStats = {
   created: number;
   updated: number;
   skipped: number;
 };
 
+/**
+ * Derives note title from file path.
+ */
 const deriveTitleFromPath = (path: string): string => {
   const filename = basename(path);
   const extension = extname(filename);
   return extension.length > 0 ? filename.slice(0, -extension.length) : filename;
 };
 
+/**
+ * Computes stable note id from path.
+ */
 const computeNoteId = (path: string): string => createHash("sha256").update(path).digest("hex");
 
+/**
+ * Computes lightweight source fingerprint for import change detection.
+ */
 const computeSourceFingerprint = async (path: string): Promise<string> => {
   try {
     const stats = await stat(path);
@@ -89,9 +122,15 @@ const computeSourceFingerprint = async (path: string): Promise<string> => {
   }
 };
 
+/**
+ * Builds title lookup map for link resolution.
+ */
 const buildTitleMap = (notes: ReadonlyArray<Note>): Map<string, Note> =>
   new Map(notes.map((note) => [note.title, note]));
 
+/**
+ * Builds link inserts extracted from note markdown.
+ */
 const buildLinkInserts = (
   note: Note,
   titleMap: Map<string, Note>,
@@ -116,11 +155,17 @@ const buildLinkInserts = (
   return { links, total: links.length };
 };
 
+/**
+ * Creates JSON response object with status code.
+ */
 const json = (body: unknown, status = 200): Response =>
   Response.json(body, {
     status,
   });
 
+/**
+ * Builds notes API routes.
+ */
 export const createNotesRoutes = (db: DbClient) => {
   const noteIdParamSchema = object({
     id: NoteIdSchema,

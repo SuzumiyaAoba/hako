@@ -1,5 +1,8 @@
 import { index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+/**
+ * Note entity table.
+ */
 export const notes = sqliteTable(
   "notes",
   {
@@ -15,6 +18,9 @@ export const notes = sqliteTable(
   }),
 );
 
+/**
+ * Wiki-link relationship table.
+ */
 export const links = sqliteTable(
   "links",
   {
@@ -36,20 +42,20 @@ export const links = sqliteTable(
   }),
 );
 
-export const noteLinkStates = sqliteTable(
-  "note_link_states",
-  {
-    noteId: text("note_id")
-      .primaryKey()
-      .references(() => notes.id, { onDelete: "cascade" }),
-    contentHash: text("content_hash").notNull(),
-    indexedAt: text("indexed_at").notNull(),
-  },
-  (table) => ({
-    noteIndex: index("idx_note_link_states_note_id").on(table.noteId),
-  }),
-);
+/**
+ * Incremental reindex state table.
+ */
+export const noteLinkStates = sqliteTable("note_link_states", {
+  noteId: text("note_id")
+    .primaryKey()
+    .references(() => notes.id, { onDelete: "cascade" }),
+  contentHash: text("content_hash").notNull(),
+  indexedAt: text("indexed_at").notNull(),
+});
 
+/**
+ * Tag definition table.
+ */
 export const tags = sqliteTable(
   "tags",
   {
@@ -61,6 +67,9 @@ export const tags = sqliteTable(
   }),
 );
 
+/**
+ * Note-tag many-to-many relation table.
+ */
 export const noteTags = sqliteTable(
   "note_tags",
   {
@@ -76,6 +85,9 @@ export const noteTags = sqliteTable(
   }),
 );
 
+/**
+ * Index execution history table.
+ */
 export const indexRuns = sqliteTable("index_runs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   startedAt: text("started_at").notNull(),
