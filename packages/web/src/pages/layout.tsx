@@ -1,54 +1,8 @@
-import {
-  IoDocumentTextOutline,
-  IoFileTrayFullOutline,
-  IoGitNetworkOutline,
-  IoSettingsOutline,
-} from "react-icons/io5";
+import { IoSettingsOutline } from "react-icons/io5";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import type { Note } from "@hako/core";
 import { cn } from "../lib/utils";
-
-/**
- * Global icon navigation shown in the left sidebar.
- */
-const GlobalIconMenu = ({ pathname }: { pathname: string }): JSX.Element => (
-  <nav className="flex flex-col items-center gap-2" aria-label="global">
-    <a
-      className={cn(
-        "inline-flex size-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-        pathname === "/" && "bg-slate-100 text-slate-900",
-      )}
-      href="/"
-      aria-label="Home"
-      aria-current={pathname === "/" ? "page" : undefined}
-    >
-      <IoFileTrayFullOutline size={16} aria-hidden="true" />
-    </a>
-    <a
-      className={cn(
-        "inline-flex size-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-        pathname.startsWith("/notes") && "bg-slate-100 text-slate-900",
-      )}
-      href="/notes"
-      aria-label="Notes"
-      aria-current={pathname.startsWith("/notes") ? "page" : undefined}
-    >
-      <IoDocumentTextOutline size={16} aria-hidden="true" />
-    </a>
-    <a
-      className={cn(
-        "inline-flex size-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-        pathname.startsWith("/graph") && "bg-slate-100 text-slate-900",
-      )}
-      href="/graph"
-      aria-label="Graph"
-      aria-current={pathname.startsWith("/graph") ? "page" : undefined}
-    >
-      <IoGitNetworkOutline size={16} aria-hidden="true" />
-    </a>
-  </nav>
-);
 
 /**
  * Notes list in the sidebar.
@@ -60,7 +14,7 @@ const NotesListMenu = ({
   notes: ReadonlyArray<Pick<Note, "id" | "title">>;
   pathname: string;
 }): JSX.Element => (
-  <nav className="mt-3 flex min-h-0 flex-1 flex-col gap-3" aria-labelledby="notes-menu-title">
+  <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">
     <h2 id="notes-menu-title" className="text-xs font-semibold uppercase text-slate-500">
       Notes
     </h2>
@@ -89,7 +43,7 @@ const NotesListMenu = ({
         </ul>
       )}
     </div>
-  </nav>
+  </div>
 );
 
 const SidebarSettingsLink = ({ pathname }: { pathname: string }): JSX.Element => (
@@ -147,6 +101,8 @@ const HtmlPage = ({
             bottom: 0;
             z-index: 20;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
             background-color: rgb(241 245 249);
             border-right: 1px solid rgb(226 232 240);
             width: 17rem;
@@ -160,9 +116,10 @@ const HtmlPage = ({
           }
           .app-sidebar-content {
             display: flex;
-            height: calc(100dvh - 48px);
+            flex: 1;
+            min-height: 0;
             flex-direction: column;
-            padding: 0 0 1rem;
+            padding: 0;
             overflow-x: hidden;
             overflow-y: auto;
           }
@@ -200,7 +157,7 @@ const HtmlPage = ({
           .sidebar-footer {
             margin-top: auto;
             border-top: 1px solid rgb(226 232 240);
-            padding: 0.75rem 0.75rem 0;
+            padding: 0.75rem 0.75rem 0.75rem;
           }
           .app-layout #sidebar-toggle:not(:checked) ~ .app-main {
             margin-left: 3.5rem;
@@ -221,7 +178,6 @@ const HtmlPage = ({
               </label>
             </div>
             <div className="app-sidebar-content">
-              <GlobalIconMenu pathname={pathname} />
               {sidebarNotes ? (
                 <div className="sidebar-notes">
                   <NotesListMenu notes={sidebarNotes} pathname={pathname} />
