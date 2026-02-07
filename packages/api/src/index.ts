@@ -1,4 +1,3 @@
-import { node } from "@elysiajs/node";
 import { loadHakoConfigCached } from "@hako/core/config";
 import { Elysia } from "elysia";
 
@@ -20,7 +19,7 @@ const appConfig = await loadHakoConfigCached();
 /**
  * API application instance.
  */
-const app = new Elysia({ adapter: node() })
+const app = new Elysia()
   .get("/", () => "Hako API")
   .use(createNotesRoutes(db))
   .get("/openapi.json", () => createOpenApiDocument());
